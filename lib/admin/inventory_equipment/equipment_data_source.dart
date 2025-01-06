@@ -6,7 +6,7 @@ class EquipmentDataSource extends DataTableSource {
   final Function(String) onEdit;
   final Function(String) onDelete;
   final Function(String) onView; // Add this line
-
+  //sdd
   EquipmentDataSource(this.equipmentDocs, {
     required this.onEdit,
     required this.onDelete,
