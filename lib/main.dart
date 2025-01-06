@@ -1,9 +1,10 @@
 import 'package:capstonesproject2024/Miscellaneous/BorrowingManagement/BorrowedEquipment.dart';
 import 'package:capstonesproject2024/admin/Borrowing_Transaction/BorrowingTransactionScreen.dart';
+import 'package:capstonesproject2024/admin/Schedule/schedulescreen.dart';
+import 'package:capstonesproject2024/admin/faculty/facultyscreen.dart';
 import 'package:flutter/material.dart';
-import 'package:capstonesproject2024/admin/Transfer/transfer.dart'; // Import your Transfer screen
+import 'package:capstonesproject2024/admin/Transfer/transfer.dart';
 import 'package:capstonesproject2024/admin/usermanagement/admin_dashboard_screen.dart';
-import 'package:capstonesproject2024/admin/Inventoryroom/inventorydashboard.dart';
 import 'package:capstonesproject2024/admin/inventory_equipment/equipment_dashboard.dart';
 import 'package:capstonesproject2024/Miscellaneous/miscellaneous.dart' as misc;
 import 'package:capstonesproject2024/admin/Schedule/Schedule.dart';
@@ -41,7 +42,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var selectedScheduleCode = ''; // Initialize or get this value appropriately
+    var selectedScheduleCode = '';
     var onScheduleAdded = (String scheduleCode) {
       print("Schedule added: $scheduleCode");
     };
@@ -62,22 +63,27 @@ class MyApp extends StatelessWidget {
           profileImagePath: profileImagePath,
           adminName: adminName,
         ),
-        '/inventory': (context) => InventoryDashboard(
-            profileImagePath: profileImagePath,
-            adminName: adminName
+        '/inventory': (context) => EquipmentDashboard(
+          profileImagePath: profileImagePath,
+          adminName: adminName,
+          brandList: [],
+          equipmentTypes: [],
+          onEquipmentAdded: () {},
         ),
         '/equipment': (context) => EquipmentDashboard(
           profileImagePath: profileImagePath,
           adminName: adminName,
           brandList: const [],
-          onEquipmentAdded: () {}, equipmentTypes: [],
+          onEquipmentAdded: () {},
+          equipmentTypes: [],
         ),
         '/miscellaneous': (context) => misc.MiscellaneousScreen(
           profileImagePath: profileImagePath,
           adminName: adminName,
-          onBrandsUpdated: (List<Brand> p1) {  },
-          onEquipmentTypeUpdated: (List<EquipmentType> p1) {  },
-          onTypesUpdated: (List<Type> p1) {  }, onTypeUpdated: (List<Type> p1) {  },
+          onBrandsUpdated: (List<Brand> p1) {},
+          onEquipmentTypeUpdated: (List<EquipmentType> p1) {},
+          onTypesUpdated: (List<Type> p1) {},
+          onTypeUpdated: (List<Type> p1) {},
         ),
         '/login': (context) => LoginPage(),
         '/borrowing': (context) => BorrowingTransactionScreen(
@@ -89,18 +95,19 @@ class MyApp extends StatelessWidget {
           selectedScheduleCode: selectedScheduleCode,
           adminName: adminName,
           profileImagePath: profileImagePath,
-          onScheduleAdded: onScheduleAdded, onBrandsUpdated: (List<Brand> p1) {  },
+          onScheduleAdded: onScheduleAdded,
+          onBrandsUpdated: (List<Brand> p1) {},
         ),
-        '/schedule': (context) => SchedulingDetails(
-          adminName: adminName,
-          profileImagePath: profileImagePath,
-          onScheduleUpdated: (schedules) {},
+        '/schedule': (context) => ScheduleScreen(profileImagePath: '', adminName: '',
         ),
-
         '/borrowed-equipment': (context) => BorrowedEquipmentManagementScreen(
           profileImagePath: profileImagePath,
           adminName: adminName,
           onEquipmentUpdated: (List<BorrowedEquipment> updatedEquipment) {},
+        ),
+        '/faculty-reservation': (context) => FacultyReservationScreen(
+          profileImagePath: profileImagePath,
+          adminName: adminName,
         ),
       },
     );

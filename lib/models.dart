@@ -556,6 +556,70 @@ class Type {
   }
 }
 
+// schedule_model.dart
+
+class ScheduleModel {
+  String time;
+  String monday;
+  String tuesday;
+  String wednesday;
+  String thursday;
+  String friday;
+  String saturday;
+
+  ScheduleModel({
+    required this.time,
+    required this.monday,
+    required this.tuesday,
+    required this.wednesday,
+    required this.thursday,
+    required this.friday,
+    required this.saturday,
+  });
+
+  // Example of a method that encodes the schedule as a list of strings
+  List<String> toList() {
+    return [
+      time,
+      monday,
+      tuesday,
+      wednesday,
+      thursday,
+      friday,
+      saturday,
+    ];
+  }
+
+  // Method to get time slots based on a particular schedule day (e.g., for a teacher or student)
+  static List<String> getTimeSlots(List<ScheduleModel> schedules, String day) {
+    return schedules
+        .map((schedule) => schedule.toList()[ScheduleModel._getDayIndex(day)])
+        .toSet() // Ensure unique times
+        .toList();
+  }
+
+  // Helper method to find the correct index for each day (mapping to list)
+  static int _getDayIndex(String day) {
+    switch (day) {
+      case 'monday':
+        return 1;
+      case 'tuesday':
+        return 2;
+      case 'wednesday':
+        return 3;
+      case 'thursday':
+        return 4;
+      case 'friday':
+        return 5;
+      case 'saturday':
+        return 6;
+      default:
+        return 0;
+    }
+  }
+}
+
+
 
 
 

@@ -5,7 +5,7 @@ class DataSource {
 
   Stream<List<Map<String, dynamic>>> getUsers() {
     return firestore.collection('users').snapshots().map((snapshot) =>
-        snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList());
+        snapshot.docs.map((doc) => doc.data()).toList());
   }
 
   Future<void> deleteUser(String userId) async {

@@ -1,5 +1,4 @@
 import 'package:capstonesproject2024/admin/usermanagement/admin_dashboard_screen.dart';
-import 'package:capstonesproject2024/models.dart';
 import 'package:capstonesproject2024/services/firestore_service.dart';
 import 'package:flutter/material.dart';
 

@@ -53,7 +53,9 @@ class Sidebar extends StatelessWidget {
                   _buildSidebarItem(Icons.category, 'Miscellaneous', context, '/miscellaneous'),
                   _buildSidebarItem(Icons.handshake, 'Borrowing', context, '/borrowing'),
                   _buildSidebarItem(Icons.transfer_within_a_station, 'Transfer', context, '/transfer'),
-                  _buildSidebarItem(Icons.calendar_month, 'Schedule', context, '/schedule'), // Clicking "Schedule"
+                  _buildSidebarItem(Icons.calendar_month, 'Schedule', context, '/schedule'),
+                  _buildSidebarItem(Icons.room, 'Room Reservation', context, '/faculty-reservation'),
+                  _buildSidebarItem(Icons.logout, 'Log out', context, '/logout'),
                 ],
               ),
             ),

@@ -37,12 +37,80 @@ class _EquipmentDetailsState extends State<EquipmentDetails> {
     super.initState();
     if (widget.selectedEquipmentCode != null) {
       unitCodeController.text = widget.selectedEquipmentCode!;
-      _loadEquipmentDetails(widget.selectedEquipmentCode!);
+      _fetchEquipmentDetails(widget.selectedEquipmentCode!);
     }
     _fetchBrandList();
     _fetchTypes();
     _fetchStatuses();
     fetchMTData();
+    serialNumberController.addListener(_fetchEquipmentDetailsBySerial);
+  }
+
+  @override
+  void dispose() {
+    serialNumberController.removeListener(_fetchEquipmentDetailsBySerial);
+    super.dispose();
+  }
+
+  // Fetch equipment details based on the serial number
+  void _fetchEquipmentDetailsBySerial() async {
+    final serialNumber = serialNumberController.text;
+
+    if (serialNumber.isNotEmpty) {
+      QuerySnapshot snapshot = await _firestore
+          .collection('equipment')
+          .where('serialNumber', isEqualTo: serialNumber)
+          .get();
+
+      if (snapshot.docs.isNotEmpty) {
+        DocumentSnapshot doc = snapshot.docs.first;
+        setState(() {
+          unitCodeController.text = doc['unitCode'] ?? '';
+          modelController.text = doc['model'] ?? '';
+          selectedType = doc['type'];
+          selectedStatus = doc['status'];
+          selectedBrand = doc['brand'];
+          selectedRoom = doc['room'];
+        });
+      } else {
+        // Clear the fields if no equipment is found
+        setState(() {
+          unitCodeController.clear();
+          modelController.clear();
+          selectedType = null;
+          selectedStatus = null;
+          selectedBrand = null;
+          selectedRoom = null;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('No equipment found for this serial number.')));
+      }
+    }
+  }
+
+  // Fetch equipment details based on the unit code
+  void _fetchEquipmentDetails(String equipmentCode) async {
+    try {
+      DocumentSnapshot snapshot = await _firestore.collection('equipment').doc(equipmentCode).get();
+
+      if (snapshot.exists) {
+        setState(() {
+          unitCodeController.text = snapshot['unitCode'] ?? '';
+          modelController.text = snapshot['model'] ?? '';
+          selectedType = snapshot['type'];
+          selectedStatus = snapshot['status'];
+          selectedBrand = snapshot['brand'];
+          selectedRoom = snapshot['room'];
+        });
+      } else {
+        // Handle the case where no equipment is found for the given unit code
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('No equipment found for this unit code.')));
+      }
+    } catch (e) {
+      print('Error fetching equipment details: $e');
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to fetch equipment details: $e')));
+    }
   }
 
   Future<void> _fetchBrandList() async {
@@ -98,50 +166,6 @@ class _EquipmentDetailsState extends State<EquipmentDetails> {
     }
   }
 
-  Future<void> _loadEquipmentDetails(String unitCode) async {
-    try {
-      DocumentSnapshot snapshot = await _firestore.collection('equipment').doc(unitCode).get();
-      if (snapshot.exists) {
-        setState(() {
-          serialNumberController.text = snapshot['serialNumber'] ?? '';
-          modelController.text = snapshot['model'] ?? '';
-          selectedType = snapshot['type'];
-          selectedStatus = snapshot['status'];
-          selectedBrand = snapshot['brand'];
-          selectedRoom = snapshot['room']; // Load the room value
-        });
-      }
-    } catch (e) {
-      print('Error loading equipment details: $e');
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error loading equipment details: $e')));
-    }
-  }
-
-  Future<void> _showSaveConfirmationDialog() async {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Confirm Save'),
-          content: const Text('Are you sure you want to save these equipment details?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('CANCEL'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _saveEquipmentDetails();
-              },
-              child: const Text('CONFIRM'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   Future<void> _saveEquipmentDetails() async {
     if (_validateFields()) {
       try {
@@ -152,7 +176,7 @@ class _EquipmentDetailsState extends State<EquipmentDetails> {
           'model': modelController.text,
           'type': selectedType,
           'status': selectedStatus,
-          'room': selectedRoom, // Save selected room
+          'room': selectedRoom,
         });
 
         widget.onEquipmentAdded();
@@ -171,7 +195,7 @@ class _EquipmentDetailsState extends State<EquipmentDetails> {
         modelController.text.isEmpty ||
         selectedType == null ||
         selectedStatus == null ||
-        selectedRoom == null) { // Validate room selection as well
+        selectedRoom == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fill out all required fields')));
       return false;
     }
@@ -245,16 +269,16 @@ class _EquipmentDetailsState extends State<EquipmentDetails> {
         labelText: 'Room',
         border: OutlineInputBorder(),
       ),
-      value: selectedRoom, // Now selectedRoom should be a String
+      value: selectedRoom,
       items: maryThomaslist.map((mt) {
         return DropdownMenuItem<String>(
-          value: mt['name'], // Set the room name as the value
+          value: mt['name'],
           child: Text(mt['name'] ?? 'Unknown Room'),
         );
       }).toList(),
       onChanged: (value) {
         setState(() {
-          selectedRoom = value; // Store the selected room name
+          selectedRoom = value;
         });
       },
       hint: const Text('Select Room'),
@@ -279,19 +303,12 @@ class _EquipmentDetailsState extends State<EquipmentDetails> {
                 Expanded(
                   child: TextField(
                     controller: unitCodeController,
-                    decoration: const InputDecoration(
-                      labelText: 'Unit Code',
-                      border: OutlineInputBorder(),
-                    ),
+                    decoration: const InputDecoration(labelText: 'Unit Code', border: OutlineInputBorder()),
                   ),
                 ),
-                const SizedBox(width: 16), // Spacer between the fields
+                const SizedBox(width: 8),
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    decoration: const InputDecoration(
-                      labelText: 'Brand',
-                      border: OutlineInputBorder(),
-                    ),
                     value: selectedBrand,
                     items: brandList.isEmpty
                         ? [const DropdownMenuItem(child: Text('No Brands Available'))]
@@ -306,60 +323,53 @@ class _EquipmentDetailsState extends State<EquipmentDetails> {
                         selectedBrand = value;
                       });
                     },
+                    decoration: const InputDecoration(labelText: 'Brand', border: OutlineInputBorder()),
                     hint: const Text('Select Brand'),
                   ),
                 ),
               ],
             ),
+            const SizedBox(height: 8),
 
-            const SizedBox(height: 16),
-
-            // Second Row: Serial Number and Model
+            // Model and Serial Number
             Row(
               children: [
                 Expanded(
                   child: TextField(
-                    controller: serialNumberController,
-                    decoration: const InputDecoration(
-                      labelText: 'Serial Number',
-                      border: OutlineInputBorder(),
-                    ),
+                    controller: modelController,
+                    decoration: const InputDecoration(labelText: 'Model', border: OutlineInputBorder()),
                   ),
                 ),
-                const SizedBox(width: 16), // Spacer between the fields
+                const SizedBox(width: 8),
                 Expanded(
                   child: TextField(
-                    controller: modelController,
-                    decoration: const InputDecoration(
-                      labelText: 'Model',
-                      border: OutlineInputBorder(),
-                    ),
+                    controller: serialNumberController,
+                    decoration: const InputDecoration(labelText: 'Serial Number', border: OutlineInputBorder()),
                   ),
                 ),
               ],
             ),
+            const SizedBox(height: 8),
 
-            const SizedBox(height: 16),
+            // Row for Type, Status, and Room
             Row(
-              mainAxisAlignment: MainAxisAlignment.end, // Aligns to the right
               children: [
-                Container(
-                  width: 200, // Adjust the width as needed
+                Expanded(
                   child: _buildTypeDropdown(),
                 ),
-                const SizedBox(width: 16), // Spacer between dropdowns
-                Container(
-                  width: 200, // Adjust the width as needed
+                const SizedBox(width: 8),
+                Expanded(
                   child: _buildStatusDropdown(),
                 ),
-                const SizedBox(width: 16), // Spacer between dropdowns
-                Container(
-                  width: 200, // Adjust the width as needed
+                const SizedBox(width: 8),
+                Expanded(
                   child: _buildRoomDropdown(),
                 ),
               ],
             ),
             const SizedBox(height: 16),
+
+            // Save and Clear buttons
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -367,9 +377,9 @@ class _EquipmentDetailsState extends State<EquipmentDetails> {
                   onPressed: _clearFields,
                   child: const Text('Clear'),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 8),
                 ElevatedButton(
-                  onPressed: _showSaveConfirmationDialog,
+                  onPressed: _saveEquipmentDetails,
                   child: const Text('Save'),
                 ),
               ],

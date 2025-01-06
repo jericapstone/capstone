@@ -1,5 +1,4 @@
 import 'package:capstonesproject2024/services/firestore_service.dart';
-import 'package:capstonesproject2024/models.dart';
 
 class EquipmentTypeDataSource {
   final FirestoreService firestoreService;
@@ -18,7 +17,7 @@ class EquipmentTypeDataSource {
   // Add a new equipment type to Firestore
   Future<void> addEquipmentType(String id, String name, String description) async {
     try {
-      await firestoreService.addEquipmentType(id as String, name, description);
+      await firestoreService.addEquipmentType(id, name, description);
     } catch (e) {
       throw Exception("Failed to add equipment type: $e");
     }
@@ -27,7 +26,7 @@ class EquipmentTypeDataSource {
   // Edit an existing equipment type in Firestore
   Future<void> editEquipmentType(String id, String name, String description) async {
     try {
-      await firestoreService.updateEquipmentType(id as String, name, description);
+      await firestoreService.updateEquipmentType(id, name, description);
     } catch (e) {
       throw Exception("Failed to edit equipment type: $e");
     }

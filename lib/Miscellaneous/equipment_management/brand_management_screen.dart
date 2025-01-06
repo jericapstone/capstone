@@ -19,7 +19,6 @@ class _BrandManagementScreenState extends State<BrandManagementScreen> {
   final TextEditingController descriptionController = TextEditingController();
 
   bool _isBrandTableVisible = false;
-  bool _isEditing = false;
   late Brand _editingBrand;
   List<Brand> brands = [];
   final FirestoreService _firestoreService = FirestoreService();
@@ -82,7 +81,6 @@ class _BrandManagementScreenState extends State<BrandManagementScreen> {
 
   void startEditing(Brand brand) {
     setState(() {
-      _isEditing = true;
       _editingBrand = brand;
       brandController.text = brand.name;
       descriptionController.text = brand.description;
@@ -91,7 +89,6 @@ class _BrandManagementScreenState extends State<BrandManagementScreen> {
 
   void cancelEditing() {
     setState(() {
-      _isEditing = false;
       brandController.clear();
       descriptionController.clear();
     });
@@ -101,7 +98,6 @@ class _BrandManagementScreenState extends State<BrandManagementScreen> {
     if (_editingBrand.name == brandController.text &&
         _editingBrand.description == descriptionController.text) {
       setState(() {
-        _isEditing = false;
       });
       return;
     }
@@ -116,7 +112,6 @@ class _BrandManagementScreenState extends State<BrandManagementScreen> {
       await _firestoreService.updateBrand(updatedBrand);
       await fetchBrands();
       setState(() {
-        _isEditing = false;
       });
     } catch (e) {
       print('Error updating brand: $e');

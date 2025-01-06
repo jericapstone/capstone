@@ -1,6 +1,7 @@
 import 'package:capstonesproject2024/models.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -38,6 +39,8 @@ class FirestoreService {
   FirebaseFirestore.instance.collection('types');
   final CollectionReference transfersCollection =
   FirebaseFirestore.instance.collection('transfer');
+  final CollectionReference facultyreservationsCollection =
+  FirebaseFirestore.instance.collection('facultyreservations');
 
   // ================================
   // Type
@@ -147,7 +150,7 @@ class FirestoreService {
   Future<List<Schedule>> getSchedules() async {
     try {
       final snapshot = await _db.collection('schedules').get();
-      return snapshot.docs.map((doc) => Schedule.fromMap(doc.data() as Map<String, dynamic>)).toList();
+      return snapshot.docs.map((doc) => Schedule.fromMap(doc.data())).toList();
     } catch (e) {
       print("Error fetching schedules: $e");
       return [];
@@ -240,7 +243,7 @@ class FirestoreService {
     try {
       final snapshot = await _db.collection('MTROOMS').get();
       return snapshot.docs.map((doc) {
-        return MTRoom.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+        return MTRoom.fromMap(doc.data(), doc.id);
       }).toList();
     } catch (e) {
       print('Error fetching rooms: $e');
@@ -433,7 +436,7 @@ class FirestoreService {
       if (querySnapshot.docs.isEmpty) {
         throw Exception('Admin details not found for email: $email');
       }
-      return querySnapshot.docs.first.data() as Map<String, dynamic>;
+      return querySnapshot.docs.first.data();
     } catch (e) {
       print('Error fetching admin details: $e');
       rethrow;
@@ -752,6 +755,7 @@ class FirestoreService {
       throw Exception('Error deleting room: $e');
     }
   }
+
 }
 
 // ================================
@@ -799,3 +803,43 @@ Future<void> deleteTransfer(String transferId, dynamic _db) async {
     print('Error deleting transfer: $e');
   }
 }
+// ================================
+// Faculty Reservation
+// ================================
+
+// Add a reservation
+Future<void> addReservation(Map<String, String> reservationData, dynamic _facultyReservationsCollection) async {
+  try {
+    await _facultyReservationsCollection.add(reservationData);
+  } catch (e) {
+    print('Error adding reservation: $e');
+    throw e; // Propagate error for handling in UI
+  }
+}
+
+// Fetch all reservations
+Future<List<Map<String, dynamic>>> getReservations(dynamic _facultyReservationsCollection) async {
+  try {
+    QuerySnapshot querySnapshot = await _facultyReservationsCollection.get();
+    return querySnapshot.docs.map((doc) {
+      return {
+        'id': doc.id,
+        ...doc.data() as Map<String, dynamic>,
+      };
+    }).toList();
+  } catch (e) {
+    print('Error fetching reservations: $e');
+    throw e; // Propagate error for handling in UI
+  }
+}
+
+// Delete a reservation
+Future<void> deleteReservation(String reservationId, dynamic _facultyReservationsCollection) async {
+  try {
+    await _facultyReservationsCollection.doc(reservationId).delete();
+  } catch (e) {
+    print('Error deleting reservation: $e');
+    throw e;
+  }
+}
+

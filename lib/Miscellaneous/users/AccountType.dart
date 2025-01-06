@@ -39,7 +39,7 @@ class _AccountTypeManagementScreenState extends State<AccountTypeManagementScree
       // Pass the required parameter here
       List<AccountType> fetchedAccountTypes = await FirestoreService.getAccountTypes();
       setState(() {
-        accountTypes = fetchedAccountTypes ?? []; // Use empty list if null
+        accountTypes = fetchedAccountTypes; // Use empty list if null
         nextId = fetchedAccountTypes.isNotEmpty
             ? (fetchedAccountTypes.map((e) => int.tryParse(e.id) ?? 0).reduce((a, b) => a > b ? a : b) + 1)
             : 1;

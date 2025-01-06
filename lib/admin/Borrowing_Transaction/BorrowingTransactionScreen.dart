@@ -158,9 +158,6 @@ class _BorrowingTransactionScreenState
 
     final blob = html.Blob([csvData]);
     final url = html.Url.createObjectUrlFromBlob(blob);
-    final anchor = html.AnchorElement(href: url)
-      ..setAttribute('download', 'transactions.csv')
-      ..click();
     html.Url.revokeObjectUrl(url);
   }
 

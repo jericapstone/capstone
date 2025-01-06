@@ -1,3 +1,4 @@
+import 'package:capstonesproject2024/admin/inventory_equipment/equipment_detail.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:capstonesproject2024/admin/inventory_equipment/equipment_popup.dart';
@@ -93,7 +94,7 @@ class _PaginatedTableEquipmentState extends State<PaginatedTableEquipment> {
                           scrollDirection: Axis.horizontal,
                           child: DataTable(
                             border: TableBorder.all(color: Colors.black, width: 3),
-                            columnSpacing: 130, // Adjusted column spacing
+                            columnSpacing: 125, // Adjusted column spacing
                             dataRowHeight: 75,
                             headingRowColor: MaterialStateProperty.all(Colors.black),
                             columns: [
@@ -166,10 +167,21 @@ class _PaginatedTableEquipmentState extends State<PaginatedTableEquipment> {
     );
   }
 
-  void _viewEquipment(String docId) {
-    print("View Equipment: $docId");
-    // Implement your view logic here
+  void _viewEquipment(String serialNumber) {
+    print("View Equipment by Serial Number: $serialNumber");
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EquipmentDetails(
+          selectedEquipmentCode: serialNumber, // Pass the serial number
+          onEquipmentAdded: () {}, // Handle the addition callback if necessary
+          brandList: [], // Supply the brand list
+          equipmentTypes: [], // Supply the equipment types
+        ),
+      ),
+    );
   }
+
 
   void _updateEquipment(String docId, Map<String, dynamic> updatedEquipment) {
     firestore.collection('equipment').doc(docId).update(updatedEquipment).then((_) {
