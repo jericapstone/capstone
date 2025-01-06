@@ -390,3 +390,4 @@ class _EquipmentDetailsState extends State<EquipmentDetails> {
     );
   }
 }
+//dsds
