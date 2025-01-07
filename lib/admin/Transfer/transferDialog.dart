@@ -46,7 +46,6 @@ class _TransferFormDialogState extends State<TransferFormDialog> {
           .doc(widget.equipment.id)
           .update({
         'room': toRoomController.text.trim(),
-        'status': 'Transferred',
       });
 
       // Create a transfer record

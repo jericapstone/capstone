@@ -20,7 +20,7 @@ class EquipmentDataTable extends StatelessWidget {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: SizedBox(
-        width: MediaQuery.of(context).size.width,
+        width: MediaQuery.of(context).size.width * 0.90,
         child: DataTable(
           headingRowColor:
               WidgetStateColor.resolveWith((states) => Colors.teal.shade200),
@@ -28,18 +28,6 @@ class EquipmentDataTable extends StatelessWidget {
             DataColumn(
               label: Text(
                 'Serial Number',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-            DataColumn(
-              label: Text(
-                'Brand',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-            DataColumn(
-              label: Text(
-                'Model',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
@@ -72,8 +60,6 @@ class EquipmentDataTable extends StatelessWidget {
             return DataRow(
               cells: [
                 DataCell(Text(equipment.serialNumber)),
-                DataCell(Text(equipment.brand)),
-                DataCell(Text(equipment.model)),
                 DataCell(Text(equipment.unitCode)),
                 DataCell(Text(equipment.room)),
                 DataCell(
@@ -93,7 +79,7 @@ class EquipmentDataTable extends StatelessWidget {
                   Row(
                     children: [
                       IconButton(
-                        icon: Icon(Icons.transfer_within_a_station,
+                        icon: const Icon(Icons.transfer_within_a_station,
                             color: Colors.orange),
                         tooltip: 'Transfer',
                         onPressed: () => onTransfer(equipment),

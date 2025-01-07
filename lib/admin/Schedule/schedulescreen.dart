@@ -6,6 +6,7 @@ import 'package:capstonesproject2024/admin/Schedule/MTCL5Screen.dart';
 import 'package:capstonesproject2024/admin/Schedule/MTCL6Screen.dart';
 import 'package:capstonesproject2024/admin/Schedule/MTCL7Screen.dart';
 import 'package:capstonesproject2024/admin/Schedule/MTCL8Screen.dart';
+import 'package:capstonesproject2024/admin/Schedule/Schedule.dart';
 import 'package:flutter/material.dart';
 import 'package:capstonesproject2024/sidebar.dart'; // Make sure the Sidebar widget is imported correctly
 
@@ -55,14 +56,20 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   // Function to build MTCL cards dynamically
   Widget _buildMTCLCards() {
     List<String> mtclTitles = [
-      'MTCL 1', 'MTCL 2', 'MTCL 3', 'MTCL 4',
-      'MTCL 5', 'MTCL 6', 'MTCL 7', 'MTCL 8'
+      'MTCL 1',
+      'MTCL 2',
+      'MTCL 3',
+      'MTCL 4',
+      'MTCL 5',
+      'MTCL 6',
+      'MTCL 7',
+      'MTCL 8'
     ];
 
     // A mapping of MTCL titles to their respective screens
     Map<String, Widget> mtclScreens = {
-      'MTCL 1': MTCL1Screen(),
-      'MTCL 2': MTCL2Screen(),
+      'MTCL 1': MTCL11Screen(),
+      'MTCL 2': MTCL22Screen(),
       'MTCL 3': MTCL3Screen(),
       'MTCL 4': MTCL4Screen(),
       'MTCL 5': MTCL5Screen(),
@@ -86,10 +93,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             // Navigate to the corresponding MTCL screen based on the title
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => mtclScreens[mtclTitles[index]]!),
+              MaterialPageRoute(
+                  builder: (context) => mtclScreens[mtclTitles[index]]!),
             );
           },
-          child: _buildCard(mtclTitles[index], '0', Icons.meeting_room, Colors.purple),
+          child: _buildCard(
+              mtclTitles[index], '0', Icons.meeting_room, Colors.purple),
         );
       },
     );

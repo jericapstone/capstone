@@ -103,7 +103,6 @@ class _EquipmentTransferScreenState extends State<EquipmentTransferScreen> {
     QuerySnapshot snapshot = await FirebaseFirestore.instance
         .collection('transfers')
         .where('equipmentId', isEqualTo: equipment.id)
-        .orderBy('transferDate', descending: true)
         .get();
 
     List<TransferRecord> fetchedTransfers =

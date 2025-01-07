@@ -15,9 +15,9 @@ class TransferHistoryDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('Transfer History'),
+      title: const Text('Transfer History'),
       content: transferRecords.isEmpty
-          ? Text('No transfer records found.')
+          ? const Text('No transfer records found.')
           : SingleChildScrollView(
               child: DataTable(
                 columns: const [
