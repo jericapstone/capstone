@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "54753276247",
+    "project_id": "capstones2024",
+    "storage_bucket": "capstones2024.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:54753276247:android:82b6403a1de64b6eedce12",
+        "android_client_info": {
+          "package_name": "com.android.application"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAzluYvk94zb70DHVk8E0h7ZFNhT-8-c04"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
