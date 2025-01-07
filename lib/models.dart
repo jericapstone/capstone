@@ -1,5 +1,3 @@
-
-
 // User class to represent user details
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -62,7 +60,8 @@ class EquipmentType {
   final String name;
   final String description;
 
-  EquipmentType({required this.id, required this.name, required this.description});
+  EquipmentType(
+      {required this.id, required this.name, required this.description});
 
   // Convert EquipmentType to map for Firestore saving
   Map<String, dynamic> toMap() {
@@ -82,6 +81,7 @@ class EquipmentType {
     );
   }
 }
+
 // Status class to represent different status of equipment or rooms
 class Status {
   final String id;
@@ -192,11 +192,11 @@ class BorrowingTransaction {
       position: data['position'] ?? '',
       date: (data['date'] as Timestamp).toDate(),
       itemId: data['itemId'] ?? '',
-      userId: data['userId'] ?? '', // If userId is required, make sure it's handled properly
+      userId: data['userId'] ??
+          '', // If userId is required, make sure it's handled properly
     );
   }
 }
-
 
 // RoomEquipment class to represent equipment in a room
 class RoomEquipment {
@@ -266,6 +266,7 @@ class RoomManagement {
     };
   }
 }
+
 class BorrowedEquipment {
   String? id;
   String equipmentName;
@@ -279,7 +280,8 @@ class BorrowedEquipment {
     required this.borrowedDate,
   });
 
-  factory BorrowedEquipment.fromMap(Map<String, dynamic> map, String documentId) {
+  factory BorrowedEquipment.fromMap(
+      Map<String, dynamic> map, String documentId) {
     return BorrowedEquipment(
       id: documentId,
       equipmentName: map['equipmentName'] ?? '',
@@ -332,7 +334,6 @@ class EquipmentTransfer {
   }
 }
 
-
 // Lab Assistant
 class LabAssistant {
   final String id;
@@ -365,7 +366,7 @@ class LabAssistant {
 
 // Room For MT Lab
 class MTRoom {
-  final String id;  // Change this to int
+  final String id; // Change this to int
   final String name;
   final String description;
 
@@ -408,8 +409,10 @@ class MT {
   factory MT.fromMap(Map<String, dynamic> map, String documentId) {
     return MT(
       id: documentId,
-      name: map['name'] ?? 'Unknown Room', // Default to 'Unknown Room' if name is null
-      department: map['department'] ?? '', // Default to an empty string if department is null
+      name: map['name'] ??
+          'Unknown Room', // Default to 'Unknown Room' if name is null
+      department: map['department'] ??
+          '', // Default to an empty string if department is null
     );
   }
 
@@ -618,8 +621,3 @@ class ScheduleModel {
     }
   }
 }
-
-
-
-
-

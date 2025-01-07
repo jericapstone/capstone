@@ -1,6 +1,7 @@
 import 'package:capstonesproject2024/Miscellaneous/BorrowingManagement/BorrowedEquipment.dart';
 import 'package:capstonesproject2024/admin/Borrowing_Transaction/BorrowingTransactionScreen.dart';
 import 'package:capstonesproject2024/admin/Schedule/schedulescreen.dart';
+import 'package:capstonesproject2024/admin/Transfer/equipmentTransferScreen.dart';
 import 'package:capstonesproject2024/admin/faculty/facultyscreen.dart';
 import 'package:flutter/material.dart';
 import 'package:capstonesproject2024/admin/Transfer/transfer.dart';
@@ -11,7 +12,6 @@ import 'package:capstonesproject2024/admin/Schedule/Schedule.dart';
 import 'package:capstonesproject2024/models.dart';
 import 'login_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
-
 
 // Firebase configuration
 const firebaseConfig = FirebaseOptions(
@@ -56,59 +56,58 @@ class MyApp extends StatelessWidget {
       initialRoute: '/login',
       routes: {
         '/': (context) => AdminDashboardScreen(
-          profileImagePath: profileImagePath,
-          adminName: adminName,
-        ),
+              profileImagePath: profileImagePath,
+              adminName: adminName,
+            ),
         '/user-management': (context) => AdminDashboardScreen(
-          profileImagePath: profileImagePath,
-          adminName: adminName,
-        ),
+              profileImagePath: profileImagePath,
+              adminName: adminName,
+            ),
         '/inventory': (context) => EquipmentDashboard(
-          profileImagePath: profileImagePath,
-          adminName: adminName,
-          brandList: [],
-          equipmentTypes: [],
-          onEquipmentAdded: () {},
-        ),
+              profileImagePath: profileImagePath,
+              adminName: adminName,
+              brandList: [],
+              equipmentTypes: [],
+              onEquipmentAdded: () {},
+            ),
         '/equipment': (context) => EquipmentDashboard(
-          profileImagePath: profileImagePath,
-          adminName: adminName,
-          brandList: const [],
-          onEquipmentAdded: () {},
-          equipmentTypes: [],
-        ),
+              profileImagePath: profileImagePath,
+              adminName: adminName,
+              brandList: const [],
+              onEquipmentAdded: () {},
+              equipmentTypes: [],
+            ),
         '/miscellaneous': (context) => misc.MiscellaneousScreen(
-          profileImagePath: profileImagePath,
-          adminName: adminName,
-          onBrandsUpdated: (List<Brand> p1) {},
-          onEquipmentTypeUpdated: (List<EquipmentType> p1) {},
-          onTypesUpdated: (List<Type> p1) {},
-          onTypeUpdated: (List<Type> p1) {},
-        ),
+              profileImagePath: profileImagePath,
+              adminName: adminName,
+              onBrandsUpdated: (List<Brand> p1) {},
+              onEquipmentTypeUpdated: (List<EquipmentType> p1) {},
+              onTypesUpdated: (List<Type> p1) {},
+              onTypeUpdated: (List<Type> p1) {},
+            ),
         '/login': (context) => LoginPage(),
         '/borrowing': (context) => BorrowingTransactionScreen(
-          profileImagePath: profileImagePath,
-          adminName: adminName,
-          onTransactionsUpdated: (transactions) {},
-        ),
-        '/transfer': (context) => TransferEquipmentScreen(
-          selectedScheduleCode: selectedScheduleCode,
-          adminName: adminName,
-          profileImagePath: profileImagePath,
-          onScheduleAdded: onScheduleAdded,
-          onBrandsUpdated: (List<Brand> p1) {},
-        ),
-        '/schedule': (context) => ScheduleScreen(profileImagePath: '', adminName: '',
-        ),
+              profileImagePath: profileImagePath,
+              adminName: adminName,
+              onTransactionsUpdated: (transactions) {},
+            ),
+        '/transfer': (context) => EquipmentTransferScreen(
+              adminName: adminName,
+              profileImagePath: profileImagePath,
+            ),
+        '/schedule': (context) => ScheduleScreen(
+              profileImagePath: '',
+              adminName: '',
+            ),
         '/borrowed-equipment': (context) => BorrowedEquipmentManagementScreen(
-          profileImagePath: profileImagePath,
-          adminName: adminName,
-          onEquipmentUpdated: (List<BorrowedEquipment> updatedEquipment) {},
-        ),
+              profileImagePath: profileImagePath,
+              adminName: adminName,
+              onEquipmentUpdated: (List<BorrowedEquipment> updatedEquipment) {},
+            ),
         '/faculty-reservation': (context) => FacultyReservationScreen(
-          profileImagePath: profileImagePath,
-          adminName: adminName,
-        ),
+              profileImagePath: profileImagePath,
+              adminName: adminName,
+            ),
       },
     );
   }
