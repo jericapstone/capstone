@@ -1,46 +1,45 @@
 import 'package:capstonesproject2024/models.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // Collection References
   final CollectionReference borrowingTransactionsCollection =
-  FirebaseFirestore.instance.collection('borrowing_transactions');
+      FirebaseFirestore.instance.collection('borrowing_transactions');
   final CollectionReference roomsCollection =
-  FirebaseFirestore.instance.collection('rooms');
+      FirebaseFirestore.instance.collection('rooms');
   final CollectionReference brandsCollection =
-  FirebaseFirestore.instance.collection('brands');
+      FirebaseFirestore.instance.collection('brands');
   final CollectionReference equipmentTypesCollection =
-  FirebaseFirestore.instance.collection('equipment_types');
+      FirebaseFirestore.instance.collection('equipment_types');
   final CollectionReference statusesCollection =
-  FirebaseFirestore.instance.collection('statuses');
+      FirebaseFirestore.instance.collection('statuses');
   final CollectionReference roomEquipmentsCollection =
-  FirebaseFirestore.instance.collection('room_equipments');
+      FirebaseFirestore.instance.collection('room_equipments');
   final CollectionReference roomManagementCollection =
-  FirebaseFirestore.instance.collection('room_management');
+      FirebaseFirestore.instance.collection('room_management');
   final CollectionReference borrowedEquipmentsCollection =
-  FirebaseFirestore.instance.collection('borrowedEquipments');
+      FirebaseFirestore.instance.collection('borrowedEquipments');
   final CollectionReference equipmentTransfersCollection =
-  FirebaseFirestore.instance.collection('equipment_transfers');
+      FirebaseFirestore.instance.collection('equipment_transfers');
   final CollectionReference labAssistantsCollection =
-  FirebaseFirestore.instance.collection('lab_assistants');
+      FirebaseFirestore.instance.collection('lab_assistants');
   final CollectionReference mtrRoomsCollection =
-  FirebaseFirestore.instance.collection('MTRooms');
+      FirebaseFirestore.instance.collection('MTRooms');
   final CollectionReference mtCollection =
-  FirebaseFirestore.instance.collection('mt');
+      FirebaseFirestore.instance.collection('mt');
   final CollectionReference schedulesCollection =
-  FirebaseFirestore.instance.collection('schedule');
+      FirebaseFirestore.instance.collection('schedule');
   final CollectionReference account_typesCollection =
-  FirebaseFirestore.instance.collection('account_types');
+      FirebaseFirestore.instance.collection('account_types');
   final CollectionReference typesCollection =
-  FirebaseFirestore.instance.collection('types');
+      FirebaseFirestore.instance.collection('types');
   final CollectionReference transfersCollection =
-  FirebaseFirestore.instance.collection('transfer');
+      FirebaseFirestore.instance.collection('transfer');
   final CollectionReference facultyreservationsCollection =
-  FirebaseFirestore.instance.collection('facultyreservations');
+      FirebaseFirestore.instance.collection('facultyreservations');
 
   // ================================
   // Type
@@ -97,16 +96,15 @@ class FirestoreService {
     }
   }
 
-
-    // ================================
-    // Account Type
-    // ================================
-
+  // ================================
+  // Account Type
+  // ================================
 
   // Fetch account types from Firestore
   static Future<List<AccountType>> getAccountTypes() async {
     try {
-      final snapshot = await FirebaseFirestore.instance.collection('accountTypes').get();
+      final snapshot =
+          await FirebaseFirestore.instance.collection('accountTypes').get();
       return snapshot.docs.map((doc) {
         return AccountType(
           id: doc.id,
@@ -134,6 +132,7 @@ class FirestoreService {
       'status': accountType.status,
     });
   }
+
   Future<void> deleteAccountType(String id) async {
     try {
       await account_typesCollection.doc(id).delete();
@@ -169,7 +168,10 @@ class FirestoreService {
   // Delete a schedule
   Future<void> deleteSchedule(String subject) async {
     try {
-      var scheduleDoc = await _db.collection('schedules').where('subject', isEqualTo: subject).get();
+      var scheduleDoc = await _db
+          .collection('schedules')
+          .where('subject', isEqualTo: subject)
+          .get();
       for (var doc in scheduleDoc.docs) {
         await doc.reference.delete();
       }
@@ -181,7 +183,10 @@ class FirestoreService {
   // Update a schedule
   Future<void> updateSchedule(String subject, Schedule updatedSchedule) async {
     try {
-      var scheduleDoc = await _db.collection('schedules').where('subject', isEqualTo: subject).get();
+      var scheduleDoc = await _db
+          .collection('schedules')
+          .where('subject', isEqualTo: subject)
+          .get();
       for (var doc in scheduleDoc.docs) {
         await doc.reference.update(updatedSchedule.toMap());
       }
@@ -189,7 +194,6 @@ class FirestoreService {
       print("Error updating schedule: $e");
     }
   }
-
 
 // ================================
   // MT Management Methods
@@ -263,7 +267,10 @@ class FirestoreService {
 // Update a room in the 'MTROOMS' collection
   Future<void> updateMTRoom(MTRoom room) async {
     try {
-      await _db.collection('MTROOMS').doc(room.id.toString()).update(room.toMap());
+      await _db
+          .collection('MTROOMS')
+          .doc(room.id.toString())
+          .update(room.toMap());
     } catch (e) {
       print('Error updating room: $e');
     }
@@ -277,7 +284,6 @@ class FirestoreService {
       print('Error deleting room: $e');
     }
   }
-
 
   // ================================
   // Lab Assistant Methods (New)
@@ -326,7 +332,8 @@ class FirestoreService {
     try {
       final snapshot = await equipmentTransfersCollection.get();
       return snapshot.docs.map((doc) {
-        return EquipmentTransfer.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+        return EquipmentTransfer.fromMap(
+            doc.data() as Map<String, dynamic>, doc.id);
       }).toList();
     } catch (e) {
       print('Error fetching equipment transfers: $e');
@@ -365,8 +372,6 @@ class FirestoreService {
     }
   }
 
-
-
   // ================================
   // Borrowed Equipment Methods
   // ================================
@@ -374,7 +379,8 @@ class FirestoreService {
     try {
       final snapshot = await borrowedEquipmentsCollection.get();
       return snapshot.docs
-          .map((doc) => BorrowedEquipment.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+          .map((doc) => BorrowedEquipment.fromMap(
+              doc.data() as Map<String, dynamic>, doc.id))
           .toList();
     } catch (e) {
       print('Error fetching borrowed equipments: $e');
@@ -410,16 +416,13 @@ class FirestoreService {
     }
   }
 
-
   // ================================
   // User and Admin Credentials Methods
   // ================================
   Future<bool> checkUserCredentials(String email) async {
     try {
-      final querySnapshot = await _db
-          .collection('users')
-          .where('email', isEqualTo: email)
-          .get();
+      final querySnapshot =
+          await _db.collection('users').where('email', isEqualTo: email).get();
       return querySnapshot.docs.isNotEmpty;
     } catch (e) {
       print('Error checking user credentials: $e');
@@ -427,12 +430,30 @@ class FirestoreService {
     }
   }
 
-  Future<Map<String, dynamic>> getAdminDetails(String email) async {
+  // New method to fetch full user details (including accountType).
+  Future<Map<String, dynamic>> getUserDetails(String email) async {
     try {
       final querySnapshot = await _db
           .collection('users')
           .where('email', isEqualTo: email)
+          .limit(1)
           .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        return querySnapshot.docs.first.data();
+      } else {
+        return {}; // Return empty if user not found
+      }
+    } catch (e) {
+      print('Error fetching user details: $e');
+      return {};
+    }
+  }
+
+  Future<Map<String, dynamic>> getAdminDetails(String email) async {
+    try {
+      final querySnapshot =
+          await _db.collection('users').where('email', isEqualTo: email).get();
       if (querySnapshot.docs.isEmpty) {
         throw Exception('Admin details not found for email: $email');
       }
@@ -455,9 +476,8 @@ class FirestoreService {
       }
 
       // Return only the 'name' fields from the documents
-      List<String> types = snapshot.docs
-          .map((doc) => doc['name'] as String)
-          .toList();
+      List<String> types =
+          snapshot.docs.map((doc) => doc['name'] as String).toList();
       return types;
     } catch (e) {
       print('Error getting equipment types: $e');
@@ -465,10 +485,14 @@ class FirestoreService {
     }
   }
 
-  Future<void> updateEquipmentType(String equipmentTypeId, String newTypeName, String description) async {
+  Future<void> updateEquipmentType(
+      String equipmentTypeId, String newTypeName, String description) async {
     try {
       // Update the equipment type document in Firestore
-      await _firestore.collection('equipmentTypes').doc(equipmentTypeId).update({
+      await _firestore
+          .collection('equipmentTypes')
+          .doc(equipmentTypeId)
+          .update({
         'name': newTypeName, // Update the 'name' field
       });
       print('Equipment type updated successfully');
@@ -478,7 +502,8 @@ class FirestoreService {
     }
   }
 
-  Future<void> addEquipmentType(String name, String description, String id) async {
+  Future<void> addEquipmentType(
+      String name, String description, String id) async {
     try {
       await equipmentTypesCollection.doc(id).set({
         'name': name,
@@ -496,6 +521,7 @@ class FirestoreService {
       print('Error deleting equipment type: $e');
     }
   }
+
   // ================================
   // Room Methods
   // ================================
@@ -519,23 +545,27 @@ class FirestoreService {
     }
   }
 
-  Future<void> updateRoom(MTRoom room) async { // Ensure the correct model is used
+  Future<void> updateRoom(MTRoom room) async {
+    // Ensure the correct model is used
     try {
-      await roomsCollection.doc(room.id.toString()).update(room.toMap()); // Use the correct field names here
+      await roomsCollection
+          .doc(room.id.toString())
+          .update(room.toMap()); // Use the correct field names here
     } catch (e) {
       print('Error updating room: $e');
     }
   }
 
-
-  Future<void> deleteRoom(String id) async { // Ensure the parameter type matches the ID type
+  Future<void> deleteRoom(String id) async {
+    // Ensure the parameter type matches the ID type
     try {
-      await roomsCollection.doc(id).delete(); // Use the correct ID for Firestore
+      await roomsCollection
+          .doc(id)
+          .delete(); // Use the correct ID for Firestore
     } catch (e) {
       print('Error deleting room: $e');
     }
   }
-
 
   // ================================
   // Status Methods
@@ -610,7 +640,9 @@ class FirestoreService {
           borrowedFrom: doc['borrowedFrom'],
           returnedBy: doc['returnedBy'],
           position: doc['position'],
-          date: (doc['date'] as Timestamp).toDate(), itemId: '', userId: '',
+          date: (doc['date'] as Timestamp).toDate(),
+          itemId: '',
+          userId: '',
         );
       }).toList();
     } catch (e) {
@@ -659,7 +691,9 @@ class FirestoreService {
 
   Future<void> updateRoomEquipment(RoomEquipment equipment) async {
     try {
-      await roomEquipmentsCollection.doc(equipment.id).update(equipment.toMap());
+      await roomEquipmentsCollection
+          .doc(equipment.id)
+          .update(equipment.toMap());
     } catch (e) {
       print('Error updating room equipment: $e');
     }
@@ -731,7 +765,9 @@ class FirestoreService {
 
   Future<void> addRoomManagement(RoomManagement roomManagement) async {
     try {
-      await roomManagementCollection.doc(roomManagement.id).set(roomManagement.toMap());
+      await roomManagementCollection
+          .doc(roomManagement.id)
+          .set(roomManagement.toMap());
     } catch (e) {
       print('Error adding room management: $e');
     }
@@ -755,7 +791,6 @@ class FirestoreService {
       throw Exception('Error deleting room: $e');
     }
   }
-
 }
 
 // ================================
@@ -785,7 +820,8 @@ Future<void> addTransfer(Map<String, dynamic> transferData, dynamic _db) async {
 }
 
 // Update a transfer in Firestore
-Future<void> updateTransfer(String transferId, Map<String, dynamic> updatedData, dynamic _db) async {
+Future<void> updateTransfer(
+    String transferId, Map<String, dynamic> updatedData, dynamic _db) async {
   try {
     await _db.collection('transfers').doc(transferId).update(updatedData);
     print('Transfer updated successfully');
@@ -808,7 +844,8 @@ Future<void> deleteTransfer(String transferId, dynamic _db) async {
 // ================================
 
 // Add a reservation
-Future<void> addReservation(Map<String, String> reservationData, dynamic _facultyReservationsCollection) async {
+Future<void> addReservation(Map<String, String> reservationData,
+    dynamic _facultyReservationsCollection) async {
   try {
     await _facultyReservationsCollection.add(reservationData);
   } catch (e) {
@@ -818,7 +855,8 @@ Future<void> addReservation(Map<String, String> reservationData, dynamic _facult
 }
 
 // Fetch all reservations
-Future<List<Map<String, dynamic>>> getReservations(dynamic _facultyReservationsCollection) async {
+Future<List<Map<String, dynamic>>> getReservations(
+    dynamic _facultyReservationsCollection) async {
   try {
     QuerySnapshot querySnapshot = await _facultyReservationsCollection.get();
     return querySnapshot.docs.map((doc) {
@@ -834,7 +872,8 @@ Future<List<Map<String, dynamic>>> getReservations(dynamic _facultyReservationsC
 }
 
 // Delete a reservation
-Future<void> deleteReservation(String reservationId, dynamic _facultyReservationsCollection) async {
+Future<void> deleteReservation(
+    String reservationId, dynamic _facultyReservationsCollection) async {
   try {
     await _facultyReservationsCollection.doc(reservationId).delete();
   } catch (e) {
@@ -842,4 +881,3 @@ Future<void> deleteReservation(String reservationId, dynamic _facultyReservation
     throw e;
   }
 }
-

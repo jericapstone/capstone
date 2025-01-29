@@ -225,9 +225,9 @@ class _MTCL22ScreenState extends State<MTCL22Screen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Teacher Schedule Table
-                    Expanded(
-                        child: _buildLargeCardWithDays(
-                            'Teacher Schedule', selectedDisplaySemester!)),
+                    // Expanded(
+                    //     child: _buildLargeCardWithDays(
+                    //         'Teacher Schedule', selectedDisplaySemester!)),
                     SizedBox(width: 16),
                     // Lab Assistant Schedule Table
                     Expanded(

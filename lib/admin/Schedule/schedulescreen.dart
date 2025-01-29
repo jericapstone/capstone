@@ -37,13 +37,38 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           ),
           // Main content area
           Expanded(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    _buildMTCLCards(), // Add MTCL cards here
-                  ],
+            child: Container(
+              color: Colors.grey[100], // Light background
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Title
+                      Text(
+                        "Schedules",
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.teal[800],
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      // Subtitle
+                      Text(
+                        "Select a classroom below to view or manage its schedule:",
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                      SizedBox(height: 32),
+
+                      // The grid of cards
+                      _buildMTCLCards(),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -82,49 +107,92 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       shrinkWrap: true,
       physics: NeverScrollableScrollPhysics(),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4, // Number of columns in grid
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
+        crossAxisCount: 4, // Number of columns
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 1.2,
       ),
       itemCount: mtclTitles.length,
       itemBuilder: (context, index) {
-        return GestureDetector(
+        return InkWell(
+          borderRadius: BorderRadius.circular(16),
           onTap: () {
             // Navigate to the corresponding MTCL screen based on the title
             Navigator.push(
               context,
               MaterialPageRoute(
-                  builder: (context) => mtclScreens[mtclTitles[index]]!),
+                builder: (context) => mtclScreens[mtclTitles[index]]!,
+              ),
             );
           },
           child: _buildCard(
-              mtclTitles[index], '0', Icons.meeting_room, Colors.purple),
+            title: mtclTitles[index],
+            icon: Icons.class_,
+          ),
         );
       },
     );
   }
 
-  // Function to build each individual MTCL card
-  Widget _buildCard(String title, String count, IconData icon, Color color) {
+  // Function to build each individual MTCL card with fancy design
+  Widget _buildCard({
+    required String title,
+    required IconData icon,
+  }) {
     return Card(
       elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Icon(icon, size: 36, color: color),
-            SizedBox(height: 8),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            colors: [Colors.teal.shade100, Colors.teal.shade300],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Icon with a circle background
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: Colors.teal.shade800,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 30,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(height: 12),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.teal[900],
+                  ),
+                ),
+                SizedBox(height: 6),
+                // A small text or subtitle if you want
+                Text(
+                  "Tap to view schedule",
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.teal[700],
+                  ),
+                ),
+              ],
             ),
-            SizedBox(height: 8),
-            Text(
-              count,
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-          ],
+          ),
         ),
       ),
     );

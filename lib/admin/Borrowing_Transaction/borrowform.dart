@@ -1,5 +1,6 @@
 // borrow_form_screen.dart
 
+import 'package:capstonesproject2024/services/notifemailsevice.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -17,12 +18,15 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
   final TextEditingController _borrowerNameController = TextEditingController();
   final TextEditingController _idController =
       TextEditingController(); // Renamed
+  final TextEditingController _borrowerEmailController =
+      TextEditingController(); // NEW: Email field
+
   String _borrowerPosition = 'Staff'; // Default value
   final TextEditingController _borrowerDepartmentController =
       TextEditingController();
   final TextEditingController _serialNumberController = TextEditingController();
   final TextEditingController _purposeController = TextEditingController();
-
+  final _messageverify = EmailServiceVer();
   // New Controller for Lab Assistant
   String? _selectedLabAssistant;
 
@@ -44,6 +48,9 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
 
   // List to store lab assistants
   List<String> _labAssistants = [];
+
+  // Flag to indicate if the item is already borrowed
+  bool _isAlreadyBorrowed = false;
 
   @override
   void initState() {
@@ -83,11 +90,13 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
   Future<void> _fetchEquipmentDetails(String serialNumber) async {
     setState(() {
       _isFetching = true;
+      // Reset fields
       _brand = '';
       _model = '';
       _room = '';
       _status = '';
       _unitCode = '';
+      _isAlreadyBorrowed = false; // Reset borrowed check
     });
 
     try {
@@ -106,6 +115,21 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
           _status = data['status'] ?? '';
           _unitCode = data['unitCode'] ?? '';
         });
+
+        // If the equipment is already "Borrowed," set _isAlreadyBorrowed to true.
+        if (_status.toLowerCase() == 'borrowed') {
+          _isAlreadyBorrowed = true;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'This item is already borrowed and cannot be borrowed again.',
+                style: TextStyle(color: Colors.white),
+              ),
+              backgroundColor: Colors.orange,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       } else {
         // Serial number not found
         ScaffoldMessenger.of(context).showSnackBar(
@@ -197,6 +221,26 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
   // Method to submit the form
   Future<void> _submitForm() async {
     if (_formKey.currentState!.validate()) {
+      // If item is already marked as borrowed, don't proceed
+      if (_isAlreadyBorrowed) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'This item is already borrowed. Cannot submit.',
+              style: TextStyle(color: Colors.white),
+            ),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+      _messageverify.sendMailVerified(
+          recipientEmail: _borrowerEmailController.text,
+          message:
+              "You borrowed Item Serial number: ${_serialNumberController.text} - Brand ${_brand} - UnitCode ${_unitCode}  ",
+          subject: "You borrowed ITem: ${_borrowerNameController.text}");
+      // Check if the item details were actually fetched
       if (_brand.isEmpty ||
           _model.isEmpty ||
           _room.isEmpty ||
@@ -247,7 +291,8 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
         // Add borrowing record to 'borrowings' collection with 'returnDate' as null
         await _firestore.collection('borrowings').add({
           'borrowerName': _borrowerNameController.text.trim(),
-          'ID': _idController.text.trim(), // Renamed
+          'borrowerEmail': _borrowerEmailController.text.trim(), // NEW FIELD
+          'ID': _idController.text.trim(),
           'borrowerPosition': _borrowerPosition,
           'borrowerDepartment': _borrowerDepartmentController.text.trim(),
           'serialNumber': _serialNumberController.text.trim(),
@@ -260,10 +305,10 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
           'purpose': _purposeController.text.trim(),
           'borrowedAt': Timestamp.now(),
           'returnDate': null, // Initialize returnDate as null
-          'labAssistant': _selectedLabAssistant, // New field
+          'labAssistant': _selectedLabAssistant,
         });
 
-        // Update equipment status to 'Borrowed' (optional)
+        // Update equipment status to 'Borrowed'
         await _firestore
             .collection('equipment')
             .where('serialNumber',
@@ -291,13 +336,14 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
         _formKey.currentState!.reset();
         setState(() {
           _borrowerPosition = 'Staff';
-          _selectedLabAssistant = null; // Reset selected assistant
+          _selectedLabAssistant = null;
           _brand = '';
           _model = '';
           _room = '';
           _status = '';
           _unitCode = '';
           _borrowedDateTime = null;
+          _isAlreadyBorrowed = false;
         });
       } catch (e) {
         print('Error submitting form: $e');
@@ -318,7 +364,8 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
   @override
   void dispose() {
     _borrowerNameController.dispose();
-    _idController.dispose(); // Updated
+    _idController.dispose();
+    _borrowerEmailController.dispose(); // Dispose the email controller
     _borrowerDepartmentController.dispose();
     _serialNumberController.dispose();
     _purposeController.dispose();
@@ -337,7 +384,7 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16.0),
             ),
-            margin: EdgeInsets.symmetric(vertical: 12.0),
+            margin: const EdgeInsets.symmetric(vertical: 12.0),
             child: Padding(
               padding: EdgeInsets.all(24.0),
               child: Column(
@@ -352,6 +399,7 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
                     ),
                   ),
                   SizedBox(height: 20),
+
                   // Borrower Name
                   TextFormField(
                     controller: _borrowerNameController,
@@ -367,11 +415,29 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
                     },
                   ),
                   SizedBox(height: 16),
+
+                  // Email
+                  TextFormField(
+                    controller: _borrowerEmailController,
+                    decoration: InputDecoration(
+                      labelText: 'Borrower Email',
+                      prefixIcon: Icon(Icons.email),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Please enter email';
+                      }
+                      // Optionally add more complex email validation
+                      return null;
+                    },
+                  ),
+                  SizedBox(height: 16),
+
                   // ID (Renamed from Border ID)
                   TextFormField(
                     controller: _idController,
                     decoration: InputDecoration(
-                      labelText: 'ID', // Updated label
+                      labelText: 'ID',
                       prefixIcon: Icon(Icons.badge),
                     ),
                     validator: (value) {
@@ -382,6 +448,7 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
                     },
                   ),
                   SizedBox(height: 16),
+
                   // Borrower Position Dropdown
                   DropdownButtonFormField<String>(
                     value: _borrowerPosition,
@@ -408,6 +475,7 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
                     },
                   ),
                   SizedBox(height: 16),
+
                   // Borrower Department
                   TextFormField(
                     controller: _borrowerDepartmentController,
@@ -423,6 +491,7 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
                     },
                   ),
                   SizedBox(height: 16),
+
                   // Lab Assistant Dropdown
                   DropdownButtonFormField<String>(
                     value: _selectedLabAssistant,
@@ -762,15 +831,5 @@ class StatusBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
     );
-  }
-}
-
-// Extension to darken a color
-extension ColorExtension on Color {
-  Color darken([double amount = .1]) {
-    assert(amount >= 0 && amount <= 1);
-    final hsl = HSLColor.fromColor(this);
-    final hslDark = hsl.withLightness((hsl.lightness - amount).clamp(0.0, 1.0));
-    return hslDark.toColor();
   }
 }

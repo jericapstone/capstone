@@ -1,6 +1,8 @@
+import 'package:flutter/material.dart';
 import 'package:capstonesproject2024/admin/usermanagement/admin_dashboard_screen.dart';
 import 'package:capstonesproject2024/services/firestore_service.dart';
-import 'package:flutter/material.dart';
+// Import the SharedPreferences package
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends StatefulWidget {
   @override
@@ -16,23 +18,46 @@ class _LoginPageState extends State<LoginPage> {
     String email = _emailController.text.trim();
 
     try {
-      bool isAuthenticated = await _firestoreService.checkUserCredentials(email);
+      // 1) Check if user exists
+      bool isAuthenticated =
+          await _firestoreService.checkUserCredentials(email);
 
       if (isAuthenticated) {
-        // Fetch admin details from Firestore
-        var adminDetails = await _firestoreService.getAdminDetails(email);
+        // 2) Fetch user details (including accountType)
+        var userDetails = await _firestoreService.getUserDetails(email);
 
-        // Navigate to AdminDashboardScreen on successful login
+        // 3) If no data returned, handle the error
+        if (userDetails.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('User details not found!')),
+          );
+          return;
+        }
+
+        // 4) Extract fields from Firestore
+        String profileImage =
+            userDetails['profileImage'] ?? 'assets/warriors.png';
+        String accountType = userDetails['accountType'] ?? 'Admin';
+
+        // 5) Store the accountType to SharedPreferences
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('accountType', accountType);
+
+        // Optionally store the profile image path, user name, etc., if needed
+        // await prefs.setString('profileImage', profileImage);
+
+        // Then navigate to your main admin dashboard screen
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (context) => AdminDashboardScreen(
-              profileImagePath: adminDetails['profileImage'] ?? 'assets/default.png', // Default fallback
-              adminName: adminDetails['name'] ?? 'Admin Name',
+              profileImagePath: profileImage,
+              adminName: accountType,
             ),
           ),
         );
       } else {
+        // Email not found in Firestore
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Email not found!')),
         );
@@ -50,6 +75,7 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       body: Row(
         children: [
+          // Left side: an image or logo
           Expanded(
             flex: 1,
             child: Container(
@@ -59,45 +85,90 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
           ),
+
+          // Right side: Gradient + login card
           Expanded(
             flex: 1,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 50.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Image.asset('assets/ccs.png', height: 300),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'CCS Computer Laboratory',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.teal.shade200, Colors.teal.shade500],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: Center(
+                child: Card(
+                  elevation: 8,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24.0),
                   ),
-                  const SizedBox(height: 5),
-                  const Text(
-                    'CENTRAL PHILIPPINE UNIVERSITY',
-                    style: TextStyle(fontSize: 18, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 30),
-                  TextField(
-                    controller: _emailController,
-                    decoration: InputDecoration(
-                      labelText: 'Email Address',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.email),
+                  child: Container(
+                    width: 450,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 40,
+                      horizontal: 40,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // CCS & CPU logos
+                        Image.asset('assets/ccs.png', height: 150),
+                        const SizedBox(height: 20),
+
+                        // Title text
+                        const Text(
+                          'CCS Computer Laboratory',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.teal,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'CENTRAL PHILIPPINE UNIVERSITY',
+                          style: TextStyle(fontSize: 16, color: Colors.grey),
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Email text field
+                        TextField(
+                          controller: _emailController,
+                          decoration: InputDecoration(
+                            labelText: 'Email Address',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12.0),
+                            ),
+                            prefixIcon: Icon(Icons.email),
+                          ),
+                        ),
+                        const SizedBox(height: 30),
+
+                        // Sign in button
+                        SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: ElevatedButton(
+                            onPressed: _loginUser,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.teal,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12.0),
+                              ),
+                              textStyle: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            child: const Text('SIGN IN'),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 30),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: _loginUser,
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.white60),
-                      child: const Text('SIGN IN'),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
