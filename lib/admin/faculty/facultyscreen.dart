@@ -1,5 +1,6 @@
 import 'package:capstonesproject2024/Sidebar.dart';
 import 'package:capstonesproject2024/model/reservation.dart';
+import 'package:capstonesproject2024/services/notifemailsevice.dart';
 import 'package:capstonesproject2024/services/reservation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -332,6 +333,7 @@ class _FacultyReservationScreenState extends State<FacultyReservationScreen> {
   // -------------------------------------------------------------------
   // SUBMIT RESERVATION
   // -------------------------------------------------------------------
+  final _emailservice = EmailServiceVer();
   Future<void> _submitReservation() async {
     if (!_dialogFormKey.currentState!.validate()) {
       return; // form invalid
@@ -354,14 +356,18 @@ class _FacultyReservationScreenState extends State<FacultyReservationScreen> {
 
     if (endDateTime.isBefore(startDateTime)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text('End time must be after start time.'),
           backgroundColor: Colors.redAccent,
         ),
       );
       return;
     }
-
+    _emailservice.sendMailVerified(
+        recipientEmail: "jericsabellano12@gmail.com",
+        message:
+            "New Room Reservation - ${_nameController.text}, Room - ${_roomController.text}, Date: ${_selectedDate!.day}, ${_selectedDate!.year}, Time: ${_startTime} - ${_endTime}",
+        subject: "New Reservation");
     // Overlap check
     final firestore = FirebaseFirestore.instance;
     final snapshot = await firestore.collection('reservations').get();
