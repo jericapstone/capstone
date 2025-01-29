@@ -366,7 +366,7 @@ class _FacultyReservationScreenState extends State<FacultyReservationScreen> {
     _emailservice.sendMailVerified(
         recipientEmail: "jericsabellano12@gmail.com",
         message:
-            "New Room Reservation - ${_nameController.text}, Room - ${_roomController.text}, Date: ${_selectedDate!.day}, ${_selectedDate!.year}, Time: ${_startTime} - ${_endTime}",
+            "New Room Reservation - ${_nameController.text}, Room - ${_roomController.text}, Date: ${_selectedDate!.day}, ${_selectedDate!.year}, Time: ${_startTime!.hour} - ${_endTime!.minute}",
         subject: "New Reservation");
     // Overlap check
     final firestore = FirebaseFirestore.instance;
