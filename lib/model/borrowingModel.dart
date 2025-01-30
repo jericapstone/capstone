@@ -19,13 +19,16 @@ class Borrowing {
   final String purpose;
   final DateTime borrowedAt;
   final DateTime? returnDate;
+  final String? borrowerEmail;
   final bool isDamaged;
   final String? damageDescription;
+  final DateTime? expectedReturn; // <-- ADD THIS
 
   Borrowing({
     required this.id,
     required this.borrowerName,
     required this.borrowerID,
+    this.borrowerEmail,
     required this.borrowerPosition,
     required this.borrowerDepartment,
     required this.serialNumber,
@@ -38,6 +41,7 @@ class Borrowing {
     required this.borrowedTime,
     required this.purpose,
     required this.borrowedAt,
+    this.expectedReturn,
     this.returnDate,
     this.isDamaged = false,
     this.damageDescription,
@@ -56,6 +60,7 @@ class Borrowing {
       serialNumber: data['serialNumber'] ?? '',
       brand: data['brand'] ?? '',
       model: data['model'] ?? '',
+      borrowerEmail: data['borrowerEmail'] ?? '',
       room: data['room'] ?? '',
       status: data['status'] ?? '',
       unitCode: data['unitCode'] ?? '',
@@ -63,6 +68,9 @@ class Borrowing {
       borrowedTime: (data['borrowedTime'] as Timestamp).toDate(),
       purpose: data['purpose'] ?? '',
       borrowedAt: (data['borrowedAt'] as Timestamp).toDate(),
+      expectedReturn: data['expectedReturn'] == null
+          ? null
+          : (doc['expectedReturn'] as Timestamp).toDate(),
       returnDate: data['returnDate'] != null
           ? (data['returnDate'] as Timestamp).toDate()
           : null,

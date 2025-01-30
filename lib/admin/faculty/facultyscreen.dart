@@ -40,8 +40,16 @@ class _FacultyReservationScreenState extends State<FacultyReservationScreen> {
   final TextEditingController _roomController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
 
+  // **Date/Time Controllers** so we can set the text after picking
+  final TextEditingController _dateController = TextEditingController();
+  final TextEditingController _startTimeController = TextEditingController();
+  final TextEditingController _endTimeController = TextEditingController();
+
   // A form key for the dialog
   final GlobalKey<FormState> _dialogFormKey = GlobalKey<FormState>();
+
+  // For sending email notifications (example usage)
+  final _emailService = EmailServiceVer();
 
   @override
   void initState() {
@@ -54,11 +62,14 @@ class _FacultyReservationScreenState extends State<FacultyReservationScreen> {
     _nameController.dispose();
     _roomController.dispose();
     _descriptionController.dispose();
+    _dateController.dispose();
+    _startTimeController.dispose();
+    _endTimeController.dispose();
     super.dispose();
   }
 
   // -------------------------------------------------------------------
-  // 🔎 FETCH RESERVATIONS
+  //  FETCH RESERVATIONS
   // -------------------------------------------------------------------
   /// Fetch reservations from Firestore and map them to dates
   Future<void> _fetchReservations() async {
@@ -93,9 +104,17 @@ class _FacultyReservationScreenState extends State<FacultyReservationScreen> {
   }
 
   // -------------------------------------------------------------------
-  // 📅 RESERVATION FORM & DIALOG
+  //  NEW RESERVATION DIALOG
   // -------------------------------------------------------------------
   void _showNewReservationDialog() {
+    // Clear all date/time in text fields
+    _dateController.clear();
+    _startTimeController.clear();
+    _endTimeController.clear();
+    _selectedDate = null;
+    _startTime = null;
+    _endTime = null;
+
     showDialog(
       context: context,
       builder: (context) {
@@ -137,35 +156,31 @@ class _FacultyReservationScreenState extends State<FacultyReservationScreen> {
                       return null;
                     },
                   ),
-                  SizedBox(height: 10),
+                  const SizedBox(height: 10),
 
                   // Description field
                   TextFormField(
                     controller: _descriptionController,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       labelText: 'Description',
                       prefixIcon: Icon(Icons.description),
                     ),
                     maxLines: 2,
                   ),
-                  SizedBox(height: 10),
+                  const SizedBox(height: 10),
 
                   // Date
                   GestureDetector(
-                    onTap: () => _pickDate(),
+                    onTap: _pickDate,
                     child: AbsorbPointer(
                       child: TextFormField(
-                        decoration: InputDecoration(
+                        controller: _dateController,
+                        decoration: const InputDecoration(
                           labelText: 'Reservation Date',
                           prefixIcon: Icon(Icons.calendar_today),
                         ),
-                        controller: TextEditingController(
-                          text: _selectedDate == null
-                              ? ''
-                              : DateFormat('yyyy-MM-dd').format(_selectedDate!),
-                        ),
                         validator: (value) {
-                          if (_selectedDate == null) {
+                          if (value == null || value.trim().isEmpty) {
                             return 'Please select a date.';
                           }
                           return null;
@@ -173,24 +188,20 @@ class _FacultyReservationScreenState extends State<FacultyReservationScreen> {
                       ),
                     ),
                   ),
-                  SizedBox(height: 10),
+                  const SizedBox(height: 10),
 
                   // Start Time
                   GestureDetector(
-                    onTap: () => _pickStartTime(),
+                    onTap: _pickStartTime,
                     child: AbsorbPointer(
                       child: TextFormField(
-                        decoration: InputDecoration(
+                        controller: _startTimeController,
+                        decoration: const InputDecoration(
                           labelText: 'Start Time',
                           prefixIcon: Icon(Icons.access_time),
                         ),
-                        controller: TextEditingController(
-                          text: _startTime == null
-                              ? ''
-                              : _startTime!.format(context),
-                        ),
                         validator: (value) {
-                          if (_startTime == null) {
+                          if (value == null || value.trim().isEmpty) {
                             return 'Please select a start time.';
                           }
                           return null;
@@ -198,23 +209,20 @@ class _FacultyReservationScreenState extends State<FacultyReservationScreen> {
                       ),
                     ),
                   ),
-                  SizedBox(height: 10),
+                  const SizedBox(height: 10),
 
                   // End Time
                   GestureDetector(
-                    onTap: () => _pickEndTime(),
+                    onTap: _pickEndTime,
                     child: AbsorbPointer(
                       child: TextFormField(
-                        decoration: InputDecoration(
+                        controller: _endTimeController,
+                        decoration: const InputDecoration(
                           labelText: 'End Time',
                           prefixIcon: Icon(Icons.access_time),
                         ),
-                        controller: TextEditingController(
-                          text:
-                              _endTime == null ? '' : _endTime!.format(context),
-                        ),
                         validator: (value) {
-                          if (_endTime == null) {
+                          if (value == null || value.trim().isEmpty) {
                             return 'Please select an end time.';
                           }
                           return null;
@@ -228,14 +236,14 @@ class _FacultyReservationScreenState extends State<FacultyReservationScreen> {
           ),
           actions: [
             TextButton(
-              child: Text('Cancel'),
+              child: const Text('Cancel'),
               onPressed: () {
                 _clearFormFields();
                 Navigator.of(context).pop(); // close the dialog
               },
             ),
             ElevatedButton(
-              child: Text('Submit'),
+              child: const Text('Submit'),
               onPressed: () async {
                 await _submitReservation();
               },
@@ -246,11 +254,10 @@ class _FacultyReservationScreenState extends State<FacultyReservationScreen> {
     );
   }
 
-  /// Show a modal with the reservations of a given day
+  // Show a modal with the reservations of a given day
   void _showReservationsModal(DateTime day) {
     final dayReservations = _getReservationsForDay(day);
-    if (dayReservations.isEmpty)
-      return; // If no reservations, do nothing or show an empty message
+    if (dayReservations.isEmpty) return;
 
     showDialog(
       context: context,
@@ -262,16 +269,17 @@ class _FacultyReservationScreenState extends State<FacultyReservationScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: dayReservations.map((res) {
-                // You can choose what details to show here
                 String start = DateFormat('HH:mm').format(res.startDateTime);
                 String end = DateFormat('HH:mm').format(res.endDateTime);
 
                 return Card(
                   elevation: 2,
-                  margin: EdgeInsets.symmetric(vertical: 4.0),
+                  margin: const EdgeInsets.symmetric(vertical: 4.0),
                   child: ListTile(
-                    title: Text(res.name,
-                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    title: Text(
+                      res.name,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     subtitle: Text(
                         '$start - $end\nRoom: ${res.room}\n${res.description}'),
                   ),
@@ -281,7 +289,7 @@ class _FacultyReservationScreenState extends State<FacultyReservationScreen> {
           ),
           actions: [
             TextButton(
-              child: Text('Close'),
+              child: const Text('Close'),
               onPressed: () => Navigator.of(context).pop(),
             ),
           ],
@@ -291,7 +299,7 @@ class _FacultyReservationScreenState extends State<FacultyReservationScreen> {
   }
 
   // -------------------------------------------------------------------
-  // PICKERS
+  // PICKERS for date/time
   // -------------------------------------------------------------------
   Future<void> _pickDate() async {
     final now = DateTime.now();
@@ -304,6 +312,8 @@ class _FacultyReservationScreenState extends State<FacultyReservationScreen> {
     if (picked != null) {
       setState(() {
         _selectedDate = picked;
+        // Update the text field
+        _dateController.text = DateFormat('yyyy-MM-dd').format(picked);
       });
     }
   }
@@ -315,6 +325,8 @@ class _FacultyReservationScreenState extends State<FacultyReservationScreen> {
     if (picked != null) {
       setState(() {
         _startTime = picked;
+        // Update the text field
+        _startTimeController.text = picked.format(context);
       });
     }
   }
@@ -326,6 +338,8 @@ class _FacultyReservationScreenState extends State<FacultyReservationScreen> {
     if (picked != null) {
       setState(() {
         _endTime = picked;
+        // Update the text field
+        _endTimeController.text = picked.format(context);
       });
     }
   }
@@ -333,20 +347,19 @@ class _FacultyReservationScreenState extends State<FacultyReservationScreen> {
   // -------------------------------------------------------------------
   // SUBMIT RESERVATION
   // -------------------------------------------------------------------
-  final _emailservice = EmailServiceVer();
   Future<void> _submitReservation() async {
     if (!_dialogFormKey.currentState!.validate()) {
       return; // form invalid
     }
 
-    final startDateTime = DateTime(
+    final DateTime startDateTime = DateTime(
       _selectedDate!.year,
       _selectedDate!.month,
       _selectedDate!.day,
       _startTime!.hour,
       _startTime!.minute,
     );
-    final endDateTime = DateTime(
+    final DateTime endDateTime = DateTime(
       _selectedDate!.year,
       _selectedDate!.month,
       _selectedDate!.day,
@@ -363,11 +376,20 @@ class _FacultyReservationScreenState extends State<FacultyReservationScreen> {
       );
       return;
     }
-    _emailservice.sendMailVerified(
-        recipientEmail: "jericsabellano12@gmail.com",
-        message:
-            "New Room Reservation - ${_nameController.text}, Room - ${_roomController.text}, Date: ${_selectedDate!.day}, ${_selectedDate!.year}, Time: ${_startTime!.hour} - ${_endTime!.minute}",
-        subject: "New Reservation");
+
+    // Example email
+    _emailService.sendMailVerified(
+      recipientEmail: "jericsabellano12@gmail.com",
+      subject: "New Reservation",
+      message: "New Room Reservation:\n"
+          "- Name: ${_nameController.text}\n"
+          "- Room: ${_roomController.text}\n"
+          "- Date: ${DateFormat('yyyy-MM-dd').format(_selectedDate!)}\n"
+          "- Start: ${_startTime!.format(context)}\n"
+          "- End: ${_endTime!.format(context)}\n"
+          "- Description: ${_descriptionController.text}\n",
+    );
+
     // Overlap check
     final firestore = FirebaseFirestore.instance;
     final snapshot = await firestore.collection('reservations').get();
@@ -434,6 +456,9 @@ class _FacultyReservationScreenState extends State<FacultyReservationScreen> {
     _nameController.clear();
     _roomController.clear();
     _descriptionController.clear();
+    _dateController.clear();
+    _startTimeController.clear();
+    _endTimeController.clear();
     setState(() {
       _selectedDate = null;
       _startTime = null;
@@ -442,7 +467,7 @@ class _FacultyReservationScreenState extends State<FacultyReservationScreen> {
   }
 
   // -------------------------------------------------------------------
-  // BUILD: UI
+  // UI BUILD
   // -------------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
@@ -474,8 +499,8 @@ class _FacultyReservationScreenState extends State<FacultyReservationScreen> {
                         ),
                       ),
                       ElevatedButton.icon(
-                        icon: Icon(Icons.add),
-                        label: Text('New Reservation'),
+                        icon: const Icon(Icons.add),
+                        label: const Text('New Reservation'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.teal,
                           foregroundColor: Colors.white,
@@ -497,145 +522,139 @@ class _FacultyReservationScreenState extends State<FacultyReservationScreen> {
                           BoxShadow(
                             color: Colors.black12,
                             blurRadius: 6,
-                            offset: Offset(2, 2),
+                            offset: const Offset(2, 2),
                           ),
                         ],
                       ),
                       child: TableCalendar(
-                          // Limit range to one year from now
-                          firstDay: DateTime.now(),
-                          lastDay: DateTime.now().add(Duration(days: 365)),
-                          focusedDay: _focusedDay,
-                          selectedDayPredicate: (day) =>
-                              isSameDay(_selectedDay, day),
-                          onDaySelected: (selectedDay, focusedDay) {
-                            setState(() {
-                              _selectedDay = selectedDay;
-                              _focusedDay = focusedDay;
-                            });
-                            // If day has reservations, show them in a modal
-                            final reservations =
-                                _getReservationsForDay(selectedDay);
-                            if (reservations.isNotEmpty) {
-                              _showReservationsModal(selectedDay);
-                            }
-                          },
-                          // Extra styling for the entire calendar
-                          calendarStyle: CalendarStyle(
-                            isTodayHighlighted: true,
-                            todayDecoration: BoxDecoration(
-                              color: Colors.tealAccent.withOpacity(0.6),
-                              shape: BoxShape.rectangle,
-                              borderRadius: BorderRadius.circular(8.0),
+                        // Limit range to one year from now
+                        firstDay: DateTime.now(),
+                        lastDay: DateTime.now().add(const Duration(days: 365)),
+                        focusedDay: _focusedDay,
+                        selectedDayPredicate: (day) =>
+                            isSameDay(_selectedDay, day),
+                        onDaySelected: (selectedDay, focusedDay) {
+                          setState(() {
+                            _selectedDay = selectedDay;
+                            _focusedDay = focusedDay;
+                          });
+                          // If day has reservations, show them in a modal
+                          final reservations =
+                              _getReservationsForDay(selectedDay);
+                          if (reservations.isNotEmpty) {
+                            _showReservationsModal(selectedDay);
+                          }
+                        },
+                        // Extra styling for the entire calendar
+                        calendarStyle: CalendarStyle(
+                          isTodayHighlighted: true,
+                          todayDecoration: BoxDecoration(
+                            color: Colors.tealAccent.withOpacity(0.6),
+                            shape: BoxShape.rectangle,
+                            borderRadius: BorderRadius.circular(8.0),
+                          ),
+                          outsideDaysVisible: true,
+                          defaultTextStyle: const TextStyle(fontSize: 16),
+                          weekendTextStyle: const TextStyle(
+                            color: Colors.redAccent,
+                          ),
+                          markersMaxCount: 0,
+                          selectedDecoration: BoxDecoration(
+                            color: Colors.teal,
+                            shape: BoxShape.rectangle,
+                            borderRadius: BorderRadius.circular(8.0),
+                          ),
+                          selectedTextStyle: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                        // Fancy gradient header
+                        headerStyle: HeaderStyle(
+                          formatButtonVisible: false,
+                          titleCentered: true,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [Colors.teal, Colors.tealAccent],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
                             ),
-                            outsideDaysVisible: true,
-                            defaultTextStyle: TextStyle(fontSize: 16),
-                            weekendTextStyle: TextStyle(
-                              color: Colors.redAccent,
-                            ),
-                            markersMaxCount: 0,
-                            selectedDecoration: BoxDecoration(
-                              color: Colors.teal,
-                              shape: BoxShape.rectangle,
-                              borderRadius: BorderRadius.circular(8.0),
-                            ),
-                            selectedTextStyle: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(12.0),
                             ),
                           ),
-                          // Fancy gradient header
-                          headerStyle: HeaderStyle(
-                            formatButtonVisible: false,
-                            titleCentered: true,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [Colors.teal, Colors.tealAccent],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.vertical(
-                                top: Radius.circular(12.0),
-                              ),
-                            ),
-                            titleTextStyle: TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            leftChevronIcon: Icon(
-                              Icons.chevron_left,
-                              color: Colors.white,
-                            ),
-                            rightChevronIcon: Icon(
-                              Icons.chevron_right,
-                              color: Colors.white,
-                            ),
+                          titleTextStyle: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
                           ),
-                          // We do a custom day builder to display reservations
-                          calendarBuilders: CalendarBuilders(
-                            defaultBuilder: (context, day, focusedDay) {
-                              final dayReservations =
-                                  _getReservationsForDay(day);
-                              final hasRes = dayReservations.isNotEmpty;
-                              final isSameMonth =
-                                  (day.month == focusedDay.month);
+                          leftChevronIcon: const Icon(
+                            Icons.chevron_left,
+                            color: Colors.white,
+                          ),
+                          rightChevronIcon: const Icon(
+                            Icons.chevron_right,
+                            color: Colors.white,
+                          ),
+                        ),
+                        // We do a custom day builder to display reservations
+                        calendarBuilders: CalendarBuilders(
+                          defaultBuilder: (context, day, focusedDay) {
+                            final dayReservations = _getReservationsForDay(day);
+                            final hasRes = dayReservations.isNotEmpty;
+                            final isSameMonth = (day.month == focusedDay.month);
 
-                              return Container(
-                                // 1) Decrease margin/padding so more space is available
-                                margin: const EdgeInsets.all(2.0), // was 5.0
-                                padding: const EdgeInsets.all(3.0), // was 6.0
-                                decoration: BoxDecoration(
-                                  color: !isSameMonth
-                                      ? Colors.grey.withOpacity(0.15)
-                                      : hasRes
-                                          ? Colors.yellow.withOpacity(0.2)
-                                          : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(6.0),
-                                ),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
+                            return Container(
+                              margin: const EdgeInsets.all(2.0),
+                              padding: const EdgeInsets.all(3.0),
+                              decoration: BoxDecoration(
+                                color: !isSameMonth
+                                    ? Colors.grey.withOpacity(0.15)
+                                    : hasRes
+                                        ? Colors.yellow.withOpacity(0.2)
+                                        : Colors.transparent,
+                                borderRadius: BorderRadius.circular(6.0),
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    '${day.day}',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: !isSameMonth
+                                          ? Colors.grey
+                                          : Colors.black,
+                                    ),
+                                  ),
+                                  // Show up to 2 reservations by name
+                                  for (var r in dayReservations.take(2))
                                     Text(
-                                      '${day.day}',
-                                      // 2) Reduce the font size a bit
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14, // was 18
-                                        color: !isSameMonth
-                                            ? Colors.grey
-                                            : Colors.black,
+                                      r.name,
+                                      style: const TextStyle(
+                                        fontSize: 8,
+                                        color: Colors.black87,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  if (dayReservations.length > 2)
+                                    Text(
+                                      '+${dayReservations.length - 2} more',
+                                      style: const TextStyle(
+                                        fontSize: 8,
+                                        color: Colors.redAccent,
                                       ),
                                     ),
-                                    // Show up to 2 reservations by name
-                                    for (var r in dayReservations.take(2))
-                                      // Option A: reduce font size
-                                      Text(
-                                        r.name,
-                                        style: const TextStyle(
-                                          fontSize: 8, // was 10
-                                          color: Colors.black87,
-                                        ),
-                                        // Option B: limit lines & show ellipsis
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    if (dayReservations.length > 2)
-                                      Text(
-                                        '+${dayReservations.length - 2} more',
-                                        style: TextStyle(
-                                          fontSize: 8, // was 10
-                                          color: Colors.redAccent,
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              );
-                            },
-                            // ... (selectedBuilder, etc.)
-                          )),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
                     ),
                   ),
                 ],

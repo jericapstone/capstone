@@ -139,6 +139,7 @@ class Sidebar extends StatelessWidget {
         _buildSidebarItem(
             Icons.people, 'User Management', context, '/user-management'),
         _buildSidebarItem(Icons.inventory, 'Inventory', context, '/inventory'),
+        _buildSidebarItem(Icons.handshake, 'Borrowing', context, '/borrowing'),
         _buildSidebarItem(
             Icons.category, 'Miscellaneous', context, '/miscellaneous'),
         _buildSidebarItem(
@@ -148,8 +149,9 @@ class Sidebar extends StatelessWidget {
     }
 
     // LabAssistant can access Borrowing, Transfer (Admin can see these too)
-    if (accountType == 'LabAssistant' || accountType == 'Admin') {
+    if (accountType == 'LabAssistant') {
       menuItems.addAll([
+        _buildSidebarItem(Icons.dashboard, 'Dashboard', context, '/'),
         _buildSidebarItem(Icons.handshake, 'Borrowing', context, '/borrowing'),
         _buildSidebarItem(
             Icons.category, 'Miscellaneous', context, '/miscellaneous'),

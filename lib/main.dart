@@ -3,6 +3,7 @@ import 'package:capstonesproject2024/admin/Borrowing_Transaction/BorrowingTransa
 import 'package:capstonesproject2024/admin/Schedule/schedulescreen.dart';
 import 'package:capstonesproject2024/admin/Transfer/equipmentTransferScreen.dart';
 import 'package:capstonesproject2024/admin/faculty/facultyscreen.dart';
+import 'package:capstonesproject2024/admin/usermanagement/dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:capstonesproject2024/admin/Transfer/transfer.dart';
 import 'package:capstonesproject2024/admin/usermanagement/admin_dashboard_screen.dart';
@@ -55,7 +56,7 @@ class MyApp extends StatelessWidget {
       ),
       initialRoute: '/login',
       routes: {
-        '/': (context) => AdminDashboardScreen(
+        '/': (context) => MainDashboard(
               profileImagePath: profileImagePath,
               adminName: adminName,
             ),

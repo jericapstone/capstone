@@ -23,11 +23,16 @@ class _EquipmentDetailsState extends State<EquipmentDetails> {
   String? selectedType;
   String? selectedStatus;
   String? selectedBrand;
+
+  /// **Make the Unit Code read-only by default** and add a toggle for overrides
+  bool _isUnitCodeOverridden = false;
+
+  // Controllers
   TextEditingController unitCodeController = TextEditingController();
   TextEditingController serialNumberController = TextEditingController();
   TextEditingController modelController = TextEditingController();
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   List<String> brandList = [];
   List<String> typeList = [];
   List<String> statusList = [];
@@ -43,6 +48,8 @@ class _EquipmentDetailsState extends State<EquipmentDetails> {
     _fetchTypes();
     _fetchStatuses();
     fetchMTData();
+
+    // Listen for changes in serial number input to auto-fetch equipment details
     serialNumberController.addListener(_fetchEquipmentDetailsBySerial);
   }
 
@@ -52,7 +59,24 @@ class _EquipmentDetailsState extends State<EquipmentDetails> {
     super.dispose();
   }
 
-  // Fetch equipment details based on the serial number
+  // ---------------------------
+  //  Auto-Generate Unit Code
+  // ---------------------------
+  void _autoGenerateUnitCode() {
+    // Only generate if user hasn't unlocked/overridden the unit code
+    if (!_isUnitCodeOverridden) {
+      // If either selectedType or selectedRoom is null, show blank or partial
+      if (selectedType != null && selectedRoom != null) {
+        unitCodeController.text = '$selectedType - $selectedRoom';
+      } else {
+        unitCodeController.text = '';
+      }
+    }
+  }
+
+  // -----------------------------
+  //  Fetch By Serial Number
+  // -----------------------------
   void _fetchEquipmentDetailsBySerial() async {
     final serialNumber = serialNumberController.text;
 
@@ -65,7 +89,10 @@ class _EquipmentDetailsState extends State<EquipmentDetails> {
       if (snapshot.docs.isNotEmpty) {
         DocumentSnapshot doc = snapshot.docs.first;
         setState(() {
-          unitCodeController.text = doc['unitCode'] ?? '';
+          // If user hasn't overridden UnitCode, update it from DB
+          if (!_isUnitCodeOverridden) {
+            unitCodeController.text = doc['unitCode'] ?? '';
+          }
           modelController.text = doc['model'] ?? '';
           selectedType = doc['type'];
           selectedStatus = doc['status'];
@@ -75,27 +102,35 @@ class _EquipmentDetailsState extends State<EquipmentDetails> {
       } else {
         // Clear the fields if no equipment is found
         setState(() {
-          unitCodeController.clear();
+          if (!_isUnitCodeOverridden) {
+            unitCodeController.clear();
+          }
           modelController.clear();
           selectedType = null;
           selectedStatus = null;
           selectedBrand = null;
           selectedRoom = null;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('No equipment found for this serial number.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('No equipment found for this serial number.')));
       }
     }
   }
 
-  // Fetch equipment details based on the unit code
+  // -----------------------------
+  //  Fetch By Unit Code
+  // -----------------------------
   void _fetchEquipmentDetails(String equipmentCode) async {
     try {
-      DocumentSnapshot snapshot = await _firestore.collection('equipment').doc(equipmentCode).get();
+      DocumentSnapshot snapshot =
+          await _firestore.collection('equipment').doc(equipmentCode).get();
 
       if (snapshot.exists) {
         setState(() {
-          unitCodeController.text = snapshot['unitCode'] ?? '';
+          // If user hasn't overridden UnitCode, update it
+          if (!_isUnitCodeOverridden) {
+            unitCodeController.text = snapshot['unitCode'] ?? '';
+          }
           modelController.text = snapshot['model'] ?? '';
           selectedType = snapshot['type'];
           selectedStatus = snapshot['status'];
@@ -103,16 +138,20 @@ class _EquipmentDetailsState extends State<EquipmentDetails> {
           selectedRoom = snapshot['room'];
         });
       } else {
-        // Handle the case where no equipment is found for the given unit code
+        // Handle the case where no equipment is found
         ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('No equipment found for this unit code.')));
       }
     } catch (e) {
       print('Error fetching equipment details: $e');
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to fetch equipment details: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to fetch equipment details: $e')));
     }
   }
 
+  // -----------------------------
+  //  Fetch brand, types, status
+  // -----------------------------
   Future<void> _fetchBrandList() async {
     try {
       QuerySnapshot snapshot = await _firestore.collection('brands').get();
@@ -146,7 +185,9 @@ class _EquipmentDetailsState extends State<EquipmentDetails> {
     }
   }
 
-  // Fetch MT data (room details)
+  // -----------------------------
+  //  Fetch Rooms
+  // -----------------------------
   void fetchMTData() async {
     final mts = await getMTs(_firestore.collection('mt'));
     setState(() {
@@ -166,10 +207,16 @@ class _EquipmentDetailsState extends State<EquipmentDetails> {
     }
   }
 
+  // -----------------------------
+  //  Save Equipment
+  // -----------------------------
   Future<void> _saveEquipmentDetails() async {
     if (_validateFields()) {
       try {
-        await _firestore.collection('equipment').doc(unitCodeController.text).set({
+        await _firestore
+            .collection('equipment')
+            .doc(unitCodeController.text)
+            .set({
           'unitCode': unitCodeController.text,
           'brand': selectedBrand,
           'serialNumber': serialNumberController.text,
@@ -180,10 +227,15 @@ class _EquipmentDetailsState extends State<EquipmentDetails> {
         });
 
         widget.onEquipmentAdded();
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Equipment details saved successfully!')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Equipment details saved successfully!')),
+        );
       } catch (e) {
         print('Error saving equipment details: $e');
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to save equipment details: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save equipment details: $e')),
+        );
       }
     }
   }
@@ -196,14 +248,19 @@ class _EquipmentDetailsState extends State<EquipmentDetails> {
         selectedType == null ||
         selectedStatus == null ||
         selectedRoom == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fill out all required fields')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill out all required fields')),
+      );
       return false;
     }
     return true;
   }
 
   void _clearFields() {
-    unitCodeController.clear();
+    // If user not overridden, also reset unitCode
+    if (!_isUnitCodeOverridden) {
+      unitCodeController.clear();
+    }
     serialNumberController.clear();
     modelController.clear();
     setState(() {
@@ -214,6 +271,9 @@ class _EquipmentDetailsState extends State<EquipmentDetails> {
     });
   }
 
+  // -----------------------------
+  //  Build UI Components
+  // -----------------------------
   Widget _buildTypeDropdown() {
     return DropdownButtonFormField<String>(
       decoration: const InputDecoration(
@@ -224,14 +284,15 @@ class _EquipmentDetailsState extends State<EquipmentDetails> {
       items: typeList.isEmpty
           ? [const DropdownMenuItem(child: Text('No Types Available'))]
           : typeList.map((type) {
-        return DropdownMenuItem<String>(
-          value: type,
-          child: Text(type),
-        );
-      }).toList(),
+              return DropdownMenuItem<String>(
+                value: type,
+                child: Text(type),
+              );
+            }).toList(),
       onChanged: (value) {
         setState(() {
           selectedType = value;
+          _autoGenerateUnitCode(); // Regenerate if override not toggled
         });
       },
       hint: const Text('Select Type'),
@@ -248,11 +309,11 @@ class _EquipmentDetailsState extends State<EquipmentDetails> {
       items: statusList.isEmpty
           ? [const DropdownMenuItem(child: Text('No Status Available'))]
           : statusList.map((status) {
-        return DropdownMenuItem<String>(
-          value: status,
-          child: Text(status),
-        );
-      }).toList(),
+              return DropdownMenuItem<String>(
+                value: status,
+                child: Text(status),
+              );
+            }).toList(),
       onChanged: (value) {
         setState(() {
           selectedStatus = value;
@@ -279,6 +340,7 @@ class _EquipmentDetailsState extends State<EquipmentDetails> {
       onChanged: (value) {
         setState(() {
           selectedRoom = value;
+          _autoGenerateUnitCode(); // Regenerate if override not toggled
         });
       },
       hint: const Text('Select Room'),
@@ -294,36 +356,60 @@ class _EquipmentDetailsState extends State<EquipmentDetails> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Equipment Details', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text('Equipment Details',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
 
             // First Row: Unit Code and Brand
             Row(
               children: [
+                // Unit Code (Auto Gen, read-only unless override)
                 Expanded(
                   child: TextField(
                     controller: unitCodeController,
-                    decoration: const InputDecoration(labelText: 'Unit Code', border: OutlineInputBorder()),
+                    readOnly: !_isUnitCodeOverridden,
+                    decoration: InputDecoration(
+                      labelText: 'Unit Code (auto: type - room)',
+                      border: OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                        icon: Icon(_isUnitCodeOverridden
+                            ? Icons.lock_open
+                            : Icons.lock_outline),
+                        onPressed: () {
+                          setState(() {
+                            _isUnitCodeOverridden = !_isUnitCodeOverridden;
+                          });
+                        },
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
+
+                // Brand Dropdown
                 Expanded(
                   child: DropdownButtonFormField<String>(
                     value: selectedBrand,
                     items: brandList.isEmpty
-                        ? [const DropdownMenuItem(child: Text('No Brands Available'))]
+                        ? [
+                            const DropdownMenuItem(
+                                child: Text('No Brands Available'))
+                          ]
                         : brandList.map((brand) {
-                      return DropdownMenuItem<String>(
-                        value: brand,
-                        child: Text(brand),
-                      );
-                    }).toList(),
+                            return DropdownMenuItem<String>(
+                              value: brand,
+                              child: Text(brand),
+                            );
+                          }).toList(),
                     onChanged: (value) {
                       setState(() {
                         selectedBrand = value;
                       });
                     },
-                    decoration: const InputDecoration(labelText: 'Brand', border: OutlineInputBorder()),
+                    decoration: const InputDecoration(
+                      labelText: 'Brand',
+                      border: OutlineInputBorder(),
+                    ),
                     hint: const Text('Select Brand'),
                   ),
                 ),
@@ -337,14 +423,20 @@ class _EquipmentDetailsState extends State<EquipmentDetails> {
                 Expanded(
                   child: TextField(
                     controller: modelController,
-                    decoration: const InputDecoration(labelText: 'Model', border: OutlineInputBorder()),
+                    decoration: const InputDecoration(
+                      labelText: 'Model',
+                      border: OutlineInputBorder(),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: TextField(
                     controller: serialNumberController,
-                    decoration: const InputDecoration(labelText: 'Serial Number', border: OutlineInputBorder()),
+                    decoration: const InputDecoration(
+                      labelText: 'Serial Number',
+                      border: OutlineInputBorder(),
+                    ),
                   ),
                 ),
               ],
@@ -354,17 +446,11 @@ class _EquipmentDetailsState extends State<EquipmentDetails> {
             // Row for Type, Status, and Room
             Row(
               children: [
-                Expanded(
-                  child: _buildTypeDropdown(),
-                ),
+                Expanded(child: _buildTypeDropdown()),
                 const SizedBox(width: 8),
-                Expanded(
-                  child: _buildStatusDropdown(),
-                ),
+                Expanded(child: _buildStatusDropdown()),
                 const SizedBox(width: 8),
-                Expanded(
-                  child: _buildRoomDropdown(),
-                ),
+                Expanded(child: _buildRoomDropdown()),
               ],
             ),
             const SizedBox(height: 16),
@@ -390,4 +476,3 @@ class _EquipmentDetailsState extends State<EquipmentDetails> {
     );
   }
 }
-//dsds

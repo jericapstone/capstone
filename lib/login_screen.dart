@@ -1,3 +1,4 @@
+import 'package:capstonesproject2024/admin/usermanagement/dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:capstonesproject2024/admin/usermanagement/admin_dashboard_screen.dart';
 import 'package:capstonesproject2024/services/firestore_service.dart';
@@ -50,7 +51,7 @@ class _LoginPageState extends State<LoginPage> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => AdminDashboardScreen(
+            builder: (context) => MainDashboard(
               profileImagePath: profileImage,
               adminName: accountType,
             ),

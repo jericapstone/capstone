@@ -16,18 +16,20 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
 
   // Controllers for TextFields
   final TextEditingController _borrowerNameController = TextEditingController();
-  final TextEditingController _idController =
-      TextEditingController(); // Renamed
+  final TextEditingController _idController = TextEditingController();
   final TextEditingController _borrowerEmailController =
-      TextEditingController(); // NEW: Email field
+      TextEditingController();
 
   String _borrowerPosition = 'Staff'; // Default value
   final TextEditingController _borrowerDepartmentController =
       TextEditingController();
   final TextEditingController _serialNumberController = TextEditingController();
   final TextEditingController _purposeController = TextEditingController();
+
+  // For sending email notifications (just an example usage)
   final _messageverify = EmailServiceVer();
-  // New Controller for Lab Assistant
+
+  // Lab Assistant selection
   String? _selectedLabAssistant;
 
   // Auto-populated fields
@@ -40,6 +42,9 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
   // Borrowed Time
   DateTime? _borrowedDateTime;
 
+  // **NEW**: Expected Return Time
+  DateTime? _expectedReturnDateTime;
+
   // Firestore instance
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -49,7 +54,7 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
   // List to store lab assistants
   List<String> _labAssistants = [];
 
-  // Flag to indicate if the item is already borrowed
+  // Flag to indicate if the item is already borrowed or not borrowable
   bool _isAlreadyBorrowed = false;
 
   @override
@@ -116,8 +121,9 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
           _unitCode = data['unitCode'] ?? '';
         });
 
-        // If the equipment is already "Borrowed," set _isAlreadyBorrowed to true.
-        if (_status.toLowerCase() == 'borrowed') {
+        // Check the status to see if it's Borrowed or Damaged
+        String lowered = _status.toLowerCase();
+        if (lowered == 'borrowed') {
           _isAlreadyBorrowed = true;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -126,6 +132,18 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
                 style: TextStyle(color: Colors.white),
               ),
               backgroundColor: Colors.orange,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        } else if (lowered == 'damaged' || lowered == 'damage') {
+          _isAlreadyBorrowed = true;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'This item is damaged and cannot be borrowed.',
+                style: TextStyle(color: Colors.white),
+              ),
+              backgroundColor: Colors.redAccent,
               behavior: SnackBarBehavior.floating,
             ),
           );
@@ -162,13 +180,13 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
     }
   }
 
-  // Method to pick date and time
+  // Method to pick date and time for Borrowed Time
   Future<void> _pickBorrowedDateTime() async {
     DateTime now = DateTime.now();
     DateTime? pickedDate = await showDatePicker(
       context: context,
       initialDate: now,
-      firstDate: now.subtract(Duration(days: 0)),
+      firstDate: now,
       lastDate: DateTime(now.year + 5),
       builder: (context, child) {
         return Theme(
@@ -218,15 +236,76 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
     }
   }
 
+  // **NEW**: Method to pick date/time for Expected Return
+  Future<void> _pickExpectedReturnDateTime() async {
+    DateTime now = DateTime.now();
+    // If we already have a borrowed date, use that as min (optional)
+    final firstDate = _borrowedDateTime != null
+        ? _borrowedDateTime!
+        : now.subtract(Duration(days: 0));
+
+    DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: firstDate,
+      firstDate: firstDate,
+      lastDate: DateTime(now.year + 5),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            primaryColor: Colors.teal,
+            hintColor: Colors.tealAccent,
+            colorScheme: ColorScheme.light(primary: Colors.teal),
+            buttonTheme: ButtonThemeData(
+              textTheme: ButtonTextTheme.primary,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (pickedDate != null) {
+      TimeOfDay? pickedTime = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.now(),
+        builder: (context, child) {
+          return Theme(
+            data: Theme.of(context).copyWith(
+              primaryColor: Colors.teal,
+              hintColor: Colors.tealAccent,
+              colorScheme: ColorScheme.light(primary: Colors.teal),
+              buttonTheme: ButtonThemeData(
+                textTheme: ButtonTextTheme.primary,
+              ),
+            ),
+            child: child!,
+          );
+        },
+      );
+
+      if (pickedTime != null) {
+        setState(() {
+          _expectedReturnDateTime = DateTime(
+            pickedDate.year,
+            pickedDate.month,
+            pickedDate.day,
+            pickedTime.hour,
+            pickedTime.minute,
+          );
+        });
+      }
+    }
+  }
+
   // Method to submit the form
   Future<void> _submitForm() async {
     if (_formKey.currentState!.validate()) {
-      // If item is already marked as borrowed, don't proceed
+      // If item is borrowed or damaged, don't proceed
       if (_isAlreadyBorrowed) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'This item is already borrowed. Cannot submit.',
+              'Cannot submit. The item is either borrowed or damaged.',
               style: TextStyle(color: Colors.white),
             ),
             backgroundColor: Colors.orange,
@@ -235,12 +314,8 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
         );
         return;
       }
-      _messageverify.sendMailVerified(
-          recipientEmail: _borrowerEmailController.text,
-          message:
-              "You borrowed Item Serial number: ${_serialNumberController.text} - Brand ${_brand} - UnitCode ${_unitCode}  ",
-          subject: "You borrowed ITem: ${_borrowerNameController.text}");
-      // Check if the item details were actually fetched
+
+      // Check if the item details were fetched
       if (_brand.isEmpty ||
           _model.isEmpty ||
           _room.isEmpty ||
@@ -259,6 +334,7 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
         return;
       }
 
+      // Check Borrowed Time
       if (_borrowedDateTime == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -273,6 +349,37 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
         return;
       }
 
+      // **NEW**: Check Expected Return Time
+      if (_expectedReturnDateTime == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Please select the Expected Return Time.',
+              style: TextStyle(color: Colors.white),
+            ),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      } else {
+        // Optional: ensure expectedReturn is after borrowedTime
+        if (_expectedReturnDateTime!.isBefore(_borrowedDateTime!)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Expected Return must be after Borrowed Time.',
+                style: TextStyle(color: Colors.white),
+              ),
+              backgroundColor: Colors.redAccent,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          return;
+        }
+      }
+
+      // Check Lab Assistant
       if (_selectedLabAssistant == null || _selectedLabAssistant!.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -288,10 +395,20 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
       }
 
       try {
+        // Send email notification (example usage)
+
+        _messageverify.sendMailVerified(
+          recipientEmail: _borrowerEmailController.text,
+          message:
+              "You borrowed Item\nSerial number: ${_serialNumberController.text}\nBrand: $_brand\nUnitCode: $_unitCode",
+          subject:
+              "Borrowed Item Confirmation for ${_borrowerNameController.text}",
+        );
+
         // Add borrowing record to 'borrowings' collection with 'returnDate' as null
         await _firestore.collection('borrowings').add({
           'borrowerName': _borrowerNameController.text.trim(),
-          'borrowerEmail': _borrowerEmailController.text.trim(), // NEW FIELD
+          'borrowerEmail': _borrowerEmailController.text.trim(),
           'ID': _idController.text.trim(),
           'borrowerPosition': _borrowerPosition,
           'borrowerDepartment': _borrowerDepartmentController.text.trim(),
@@ -302,6 +419,7 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
           'status': _status,
           'unitCode': _unitCode,
           'borrowedTime': Timestamp.fromDate(_borrowedDateTime!),
+          'expectedReturn': Timestamp.fromDate(_expectedReturnDateTime!), // NEW
           'purpose': _purposeController.text.trim(),
           'borrowedAt': Timestamp.now(),
           'returnDate': null, // Initialize returnDate as null
@@ -343,6 +461,7 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
           _status = '';
           _unitCode = '';
           _borrowedDateTime = null;
+          _expectedReturnDateTime = null; // reset
           _isAlreadyBorrowed = false;
         });
       } catch (e) {
@@ -365,7 +484,7 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
   void dispose() {
     _borrowerNameController.dispose();
     _idController.dispose();
-    _borrowerEmailController.dispose(); // Dispose the email controller
+    _borrowerEmailController.dispose();
     _borrowerDepartmentController.dispose();
     _serialNumberController.dispose();
     _purposeController.dispose();
@@ -427,13 +546,12 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
                       if (value == null || value.trim().isEmpty) {
                         return 'Please enter email';
                       }
-                      // Optionally add more complex email validation
                       return null;
                     },
                   ),
                   SizedBox(height: 16),
 
-                  // ID (Renamed from Border ID)
+                  // ID
                   TextFormField(
                     controller: _idController,
                     decoration: InputDecoration(
@@ -543,6 +661,7 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
+
                   // Serial Number
                   TextFormField(
                     controller: _serialNumberController,
@@ -593,6 +712,7 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
                     },
                   ),
                   SizedBox(height: 16),
+
                   // Auto-populated Fields
                   if (_brand.isNotEmpty ||
                       _model.isNotEmpty ||
@@ -612,7 +732,6 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
                           ),
                         ),
                         SizedBox(height: 10),
-                        // Brand, Model, Room, Status, Unit Code
                         EquipmentDetailRow(
                           label: 'Brand',
                           value: _brand,
@@ -671,6 +790,7 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
                     ),
                   ),
                   SizedBox(height: 20),
+
                   // Borrowed Time Picker
                   GestureDetector(
                     onTap: _pickBorrowedDateTime,
@@ -696,6 +816,33 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
                     ),
                   ),
                   SizedBox(height: 16),
+
+                  // Expected Return Time Picker
+                  GestureDetector(
+                    onTap: _pickExpectedReturnDateTime,
+                    child: AbsorbPointer(
+                      child: TextFormField(
+                        decoration: InputDecoration(
+                          labelText: 'Expected Return Time',
+                          prefixIcon: Icon(Icons.access_time_outlined),
+                        ),
+                        controller: TextEditingController(
+                          text: _expectedReturnDateTime == null
+                              ? ''
+                              : DateFormat('yyyy-MM-dd – kk:mm')
+                                  .format(_expectedReturnDateTime!),
+                        ),
+                        validator: (value) {
+                          if (_expectedReturnDateTime == null) {
+                            return 'Please select the Expected Return Time';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 16),
+
                   // Purpose of Borrow
                   TextFormField(
                     controller: _purposeController,
@@ -796,6 +943,7 @@ class StatusBadge extends StatelessWidget {
         icon = Icons.build;
         break;
       case 'damage':
+      case 'damaged':
         color = Colors.red;
         icon = Icons.error;
         break;

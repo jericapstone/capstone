@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:csv/csv.dart';
 import 'dart:convert';
 import 'dart:html' as html;
+import 'package:capstonesproject2024/services/notifemailsevice.dart';
 
 class BorrowingsTableScreen extends StatefulWidget {
   const BorrowingsTableScreen({Key? key}) : super(key: key);
@@ -88,7 +89,6 @@ class _BorrowingsTableScreenState extends State<BorrowingsTableScreen> {
     _fetchBorrowings();
   }
 
-// Updated _exportToCSV method for Flutter Web
   Future<void> _exportToCSV() async {
     // Prepare CSV data
     List<List<String>> csvData = [
@@ -250,20 +250,6 @@ class _BorrowingsTableScreenState extends State<BorrowingsTableScreen> {
                             ),
                             DataColumn(
                               label: Text(
-                                'ID',
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              numeric: false,
-                            ),
-                            DataColumn(
-                              label: Text(
-                                'Position',
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              numeric: false,
-                            ),
-                            DataColumn(
-                              label: Text(
                                 'Department',
                                 style: TextStyle(fontWeight: FontWeight.bold),
                               ),
@@ -343,7 +329,6 @@ class _BorrowingsTableScreenState extends State<BorrowingsTableScreen> {
                           horizontalMargin: 12.0,
                           showCheckboxColumn: false,
                           showFirstLastButtons: true,
-                          // Removed dataRowColor to avoid errors
                         ),
                       ),
                     ),
@@ -358,6 +343,9 @@ class BorrowingsDataSource extends DataTableSource {
   final BuildContext context;
   final Function(Borrowing) onReturn;
 
+  // For sending email
+  final EmailServiceVer _messageverify = EmailServiceVer();
+
   BorrowingsDataSource({
     required this.borrowings,
     required this.context,
@@ -371,6 +359,12 @@ class BorrowingsDataSource extends DataTableSource {
     final borrowing = borrowings[index];
     final isEven = index % 2 == 0;
     final rowColor = isEven ? Colors.grey.withOpacity(0.05) : Colors.white;
+
+    // Overdue logic: if not returned & expectedReturn is in the past
+    final now = DateTime.now();
+    final bool isOverdue = (borrowing.returnDate == null &&
+        borrowing.expectedReturn != null &&
+        now.isAfter(borrowing.expectedReturn!));
 
     return DataRow.byIndex(
       index: index,
@@ -389,18 +383,7 @@ class BorrowingsDataSource extends DataTableSource {
             style: const TextStyle(fontWeight: FontWeight.w500),
           ),
         ),
-        DataCell(
-          Text(
-            borrowing.borrowerID,
-            style: const TextStyle(fontWeight: FontWeight.w500),
-          ),
-        ),
-        DataCell(
-          Text(
-            borrowing.borrowerPosition,
-            style: const TextStyle(fontWeight: FontWeight.w500),
-          ),
-        ),
+
         DataCell(
           Text(
             borrowing.borrowerDepartment,
@@ -426,53 +409,7 @@ class BorrowingsDataSource extends DataTableSource {
           ),
         ),
         DataCell(
-          borrowing.status.toLowerCase() == 'damage'
-              ? Chip(
-                  avatar: const Icon(
-                    Icons.error,
-                    color: Colors.white,
-                    size: 18,
-                  ),
-                  label: Text(
-                    borrowing.status,
-                    style: const TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold),
-                  ),
-                  backgroundColor: Colors.red,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8.0, vertical: 4.0),
-                )
-              : borrowing.status.toLowerCase() == 'borrowed'
-                  ? Chip(
-                      avatar: const Icon(
-                        Icons.assignment_turned_in,
-                        color: Colors.white,
-                        size: 18,
-                      ),
-                      label: Text(
-                        borrowing.status,
-                        style: const TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.bold),
-                      ),
-                      backgroundColor: Colors.blue,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8.0, vertical: 4.0),
-                    )
-                  : Chip(
-                      avatar: const Icon(
-                        Icons.check_circle,
-                        color: Colors.white,
-                        size: 18,
-                      ),
-                      label: Text(
-                        borrowing.status,
-                        style: const TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.bold),
-                      ),
-                      backgroundColor: Colors.green,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8.0, vertical: 4.0),
-                    ),
+          _buildStatusChip(borrowing.status),
         ),
         DataCell(
           Text(
@@ -498,40 +435,182 @@ class BorrowingsDataSource extends DataTableSource {
             style: TextStyle(fontSize: 12, color: Colors.grey[700]),
           ),
         ),
+        // ACTION Column
         DataCell(
-          borrowing.returnDate == null
-              ? ElevatedButton(
-                  onPressed: () => onReturn(borrowing),
-                  style: ElevatedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    backgroundColor: Colors.teal, // Text color
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8.0),
-                    ),
-                  ),
-                  child: const Text('Return'),
-                )
-              : Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12.0, vertical: 6.0),
-                  decoration: BoxDecoration(
-                    color: Colors.green[100],
-                    borderRadius: BorderRadius.circular(8.0),
-                  ),
-                  child: Text(
-                    'Returned',
-                    style: TextStyle(
-                      color: Colors.green[800],
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
+          _buildActionCell(borrowing, isOverdue),
         ),
       ],
       onSelectChanged: (selected) {
-        if (selected != null && selected) {
-          // Optional: Implement row selection if needed
-        }
+        // Optional: Implement row selection if needed
+      },
+    );
+  }
+
+  // Build a status chip
+  Widget _buildStatusChip(String status) {
+    final lowered = status.toLowerCase();
+    if (lowered == 'damage' || lowered == 'damaged') {
+      return Chip(
+        avatar: const Icon(
+          Icons.error,
+          color: Colors.white,
+          size: 18,
+        ),
+        label: Text(
+          status,
+          style:
+              const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.red,
+        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+      );
+    } else if (lowered == 'borrowed') {
+      return Chip(
+        avatar: const Icon(
+          Icons.assignment_turned_in,
+          color: Colors.white,
+          size: 18,
+        ),
+        label: Text(
+          status,
+          style:
+              const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.blue,
+        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+      );
+    } else {
+      // Usable, or anything else
+      return Chip(
+        avatar: const Icon(
+          Icons.check_circle,
+          color: Colors.white,
+          size: 18,
+        ),
+        label: Text(
+          status,
+          style:
+              const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.green,
+        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+      );
+    }
+  }
+
+  // Decide which button or label to show
+  Widget _buildActionCell(Borrowing borrowing, bool isOverdue) {
+    if (borrowing.returnDate != null) {
+      // Already returned
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+        decoration: BoxDecoration(
+          color: Colors.green[100],
+          borderRadius: BorderRadius.circular(8.0),
+        ),
+        child: Text(
+          'Returned',
+          style: TextStyle(
+            color: Colors.green[800],
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      );
+    } else if (isOverdue) {
+      // Overdue => show a "Send Email" button or "Overdue" button
+      return ElevatedButton(
+        onPressed: () {
+          _openManualEmailDialog(borrowing);
+        },
+        style: ElevatedButton.styleFrom(
+          foregroundColor: Colors.white,
+          backgroundColor: Colors.redAccent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8.0),
+          ),
+        ),
+        child: const Text('Overdue - Email'),
+      );
+    } else {
+      // Not returned, not overdue => Show Return button
+      return ElevatedButton(
+        onPressed: () => onReturn(borrowing),
+        style: ElevatedButton.styleFrom(
+          foregroundColor: Colors.white,
+          backgroundColor: Colors.teal,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8.0),
+          ),
+        ),
+        child: const Text('Return'),
+      );
+    }
+  }
+
+  // Opens a dialog to let the admin send a manual overdue email
+  void _openManualEmailDialog(Borrowing borrowing) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        final TextEditingController _messageController = TextEditingController(
+          text:
+              "Hi ${borrowing.borrowerName},\n\nYour borrowed item (Serial: ${borrowing.serialNumber}) is overdue. Please return it ASAP.\n\nThank you.",
+        );
+
+        return AlertDialog(
+          title: const Text("Overdue Email"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text("Send email to ${borrowing.borrowerEmail}?"),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _messageController,
+                maxLines: 5,
+                decoration: const InputDecoration(
+                  labelText: "Message",
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              child: const Text("Cancel"),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            ElevatedButton(
+              child: const Text("Send Email"),
+              onPressed: () async {
+                try {
+                  // Send email via your service
+                  await _messageverify.sendMailVerified(
+                    recipientEmail: borrowing.borrowerEmail ?? "",
+                    subject: "Overdue Notice - ${borrowing.serialNumber}",
+                    message: _messageController.text.trim(),
+                  );
+                  // Show success
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Email sent successfully!"),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } catch (e) {
+                  print("Error sending email: $e");
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Failed to send email."),
+                      backgroundColor: Colors.redAccent,
+                    ),
+                  );
+                }
+
+                Navigator.of(context).pop(); // close dialog
+              },
+            ),
+          ],
+        );
       },
     );
   }
