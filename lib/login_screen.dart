@@ -39,15 +39,12 @@ class _LoginPageState extends State<LoginPage> {
         String profileImage =
             userDetails['profileImage'] ?? 'assets/warriors.png';
         String accountType = userDetails['accountType'] ?? 'Admin';
+        String labassistantName =
+            "${userDetails['firstName'] ?? "Admin"} ${userDetails['firstName'] ?? ""}";
 
-        // 5) Store the accountType to SharedPreferences
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('accountType', accountType);
-
-        // Optionally store the profile image path, user name, etc., if needed
-        // await prefs.setString('profileImage', profileImage);
-
-        // Then navigate to your main admin dashboard screen
+        await prefs.setString("labassistantname", labassistantName);
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(

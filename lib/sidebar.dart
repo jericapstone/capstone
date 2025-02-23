@@ -218,6 +218,7 @@ class Sidebar extends StatelessWidget {
           if (confirmLogout) {
             final prefs = await SharedPreferences.getInstance();
             await prefs.remove('accountType');
+            await prefs.remove('labassistantname');
             Navigator.pushReplacementNamed(context, '/login');
           }
         },

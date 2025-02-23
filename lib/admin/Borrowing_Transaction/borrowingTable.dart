@@ -2,6 +2,7 @@
 
 import 'package:capstonesproject2024/admin/Borrowing_Transaction/transactionPopup.dart';
 import 'package:capstonesproject2024/model/borrowingModel.dart';
+import 'package:capstonesproject2024/model/overdueDialog.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -21,7 +22,9 @@ class _BorrowingsTableScreenState extends State<BorrowingsTableScreen> {
   List<Borrowing> _borrowings = [];
   List<Borrowing> _filteredBorrowings = [];
   bool _isLoading = true;
-  String _searchID = '';
+
+  // Renamed from _searchID to _searchQuery
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -62,17 +65,30 @@ class _BorrowingsTableScreenState extends State<BorrowingsTableScreen> {
     }
   }
 
+  // Allows searching by ID, Brand, Serial Number, Model, Borrower Name, etc.
   void _filterBorrowings() {
-    if (_searchID.isEmpty) {
+    if (_searchQuery.isEmpty) {
       setState(() {
         _filteredBorrowings = _borrowings;
       });
     } else {
+      final query = _searchQuery.toLowerCase();
       setState(() {
-        _filteredBorrowings = _borrowings
-            .where((b) =>
-                b.borrowerID.toLowerCase().contains(_searchID.toLowerCase()))
-            .toList();
+        _filteredBorrowings = _borrowings.where((b) {
+          final matchesID = b.borrowerID.toLowerCase().contains(query);
+          final matchesBrand = b.brand.toLowerCase().contains(query);
+          final matchesSerial = b.serialNumber.toLowerCase().contains(query);
+          final matchesModel = b.model.toLowerCase().contains(query);
+          final matchesBorrowerName =
+              b.borrowerName.toLowerCase().contains(query);
+
+          // Add or remove fields as needed
+          return matchesID ||
+              matchesBrand ||
+              matchesSerial ||
+              matchesModel ||
+              matchesBorrowerName;
+        }).toList();
       });
     }
   }
@@ -176,14 +192,15 @@ class _BorrowingsTableScreenState extends State<BorrowingsTableScreen> {
         children: <Widget>[
           TextField(
             decoration: InputDecoration(
-              labelText: 'Search by ID',
+              // Updated label to reflect multiple searchable fields
+              labelText: 'Search by ID, Brand, Serial, Model, Name, etc.',
               prefixIcon: const Icon(Icons.search),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12.0),
               ),
             ),
             onChanged: (value) {
-              _searchID = value.trim();
+              _searchQuery = value.trim();
               _filterBorrowings();
             },
           ),
@@ -285,7 +302,7 @@ class _BorrowingsTableScreenState extends State<BorrowingsTableScreen> {
                             ),
                             DataColumn(
                               label: Text(
-                                'Unit Code',
+                                'Quantity',
                                 style: TextStyle(fontWeight: FontWeight.bold),
                               ),
                               numeric: false,
@@ -383,7 +400,6 @@ class BorrowingsDataSource extends DataTableSource {
             style: const TextStyle(fontWeight: FontWeight.w500),
           ),
         ),
-
         DataCell(
           Text(
             borrowing.borrowerDepartment,
@@ -413,7 +429,7 @@ class BorrowingsDataSource extends DataTableSource {
         ),
         DataCell(
           Text(
-            borrowing.unitCode,
+            "${borrowing.quantity}",
             style: const TextStyle(fontWeight: FontWeight.w500),
           ),
         ),
@@ -518,18 +534,35 @@ class BorrowingsDataSource extends DataTableSource {
       );
     } else if (isOverdue) {
       // Overdue => show a "Send Email" button or "Overdue" button
-      return ElevatedButton(
-        onPressed: () {
-          _openManualEmailDialog(borrowing);
-        },
-        style: ElevatedButton.styleFrom(
-          foregroundColor: Colors.white,
-          backgroundColor: Colors.redAccent,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8.0),
+      return Row(
+        children: [
+          ElevatedButton(
+            onPressed: () {
+              // Example: open a custom Overdue dialog that can extend time or send an email
+              _openOverdueDialog(borrowing);
+            },
+            style: ElevatedButton.styleFrom(
+              foregroundColor: Colors.white,
+              backgroundColor: Colors.redAccent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.0),
+              ),
+            ),
+            child: const Text('Overdue'),
           ),
-        ),
-        child: const Text('Overdue - Email'),
+          const SizedBox(width: 5),
+          ElevatedButton(
+            onPressed: () => onReturn(borrowing),
+            style: ElevatedButton.styleFrom(
+              foregroundColor: Colors.white,
+              backgroundColor: Colors.teal,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.0),
+              ),
+            ),
+            child: const Text('Return'),
+          ),
+        ],
       );
     } else {
       // Not returned, not overdue => Show Return button
@@ -547,71 +580,13 @@ class BorrowingsDataSource extends DataTableSource {
     }
   }
 
-  // Opens a dialog to let the admin send a manual overdue email
-  void _openManualEmailDialog(Borrowing borrowing) {
+  void _openOverdueDialog(Borrowing borrowing) {
     showDialog(
       context: context,
-      builder: (context) {
-        final TextEditingController _messageController = TextEditingController(
-          text:
-              "Hi ${borrowing.borrowerName},\n\nYour borrowed item (Serial: ${borrowing.serialNumber}) is overdue. Please return it ASAP.\n\nThank you.",
-        );
-
-        return AlertDialog(
-          title: const Text("Overdue Email"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text("Send email to ${borrowing.borrowerEmail}?"),
-              const SizedBox(height: 10),
-              TextField(
-                controller: _messageController,
-                maxLines: 5,
-                decoration: const InputDecoration(
-                  labelText: "Message",
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              child: const Text("Cancel"),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            ElevatedButton(
-              child: const Text("Send Email"),
-              onPressed: () async {
-                try {
-                  // Send email via your service
-                  await _messageverify.sendMailVerified(
-                    recipientEmail: borrowing.borrowerEmail ?? "",
-                    subject: "Overdue Notice - ${borrowing.serialNumber}",
-                    message: _messageController.text.trim(),
-                  );
-                  // Show success
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Email sent successfully!"),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                } catch (e) {
-                  print("Error sending email: $e");
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Failed to send email."),
-                      backgroundColor: Colors.redAccent,
-                    ),
-                  );
-                }
-
-                Navigator.of(context).pop(); // close dialog
-              },
-            ),
-          ],
-        );
-      },
+      builder: (_) => OverdueDialog(
+        borrowing: borrowing,
+        messageService: _messageverify,
+      ),
     );
   }
 

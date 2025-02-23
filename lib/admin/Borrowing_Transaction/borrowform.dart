@@ -4,8 +4,8 @@ import 'package:capstonesproject2024/services/notifemailsevice.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-// Entry point for the Borrow Form Screen
 class BorrowFormScreen extends StatefulWidget {
   @override
   _BorrowFormScreenState createState() => _BorrowFormScreenState();
@@ -19,14 +19,20 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
   final TextEditingController _idController = TextEditingController();
   final TextEditingController _borrowerEmailController =
       TextEditingController();
-
-  String _borrowerPosition = 'Staff'; // Default value
   final TextEditingController _borrowerDepartmentController =
       TextEditingController();
   final TextEditingController _serialNumberController = TextEditingController();
   final TextEditingController _purposeController = TextEditingController();
 
-  // For sending email notifications (just an example usage)
+  // NEW: Controllers for quantity and items borrowed
+  final TextEditingController _quantityController = TextEditingController();
+  final TextEditingController _itemsBorrowedController =
+      TextEditingController();
+
+  // Borrower position dropdown
+  String _borrowerPosition = 'Staff'; // Default value
+
+  // For sending email notifications (example usage)
   final _messageverify = EmailServiceVer();
 
   // Lab Assistant selection
@@ -42,7 +48,7 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
   // Borrowed Time
   DateTime? _borrowedDateTime;
 
-  // **NEW**: Expected Return Time
+  // Expected Return Time
   DateTime? _expectedReturnDateTime;
 
   // Firestore instance
@@ -57,10 +63,25 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
   // Flag to indicate if the item is already borrowed or not borrowable
   bool _isAlreadyBorrowed = false;
 
+  // NEW: Variables to track account type and lab assistant name from SharedPreferences
+  String? _accountType; // e.g. "Admin" or "LabAssistant"
+  String? _labAssistantName; // the name stored in SharedPreferences
+
   @override
   void initState() {
     super.initState();
-    _fetchLabAssistants(); // Fetch lab assistants on init
+    _fetchAccountInfo(); // Load accountType/labassistantname
+    _fetchLabAssistants(); // Fetch lab assistants from Firestore
+  }
+
+  // NEW: Fetch accountType, labassistantname from SharedPreferences
+  Future<void> _fetchAccountInfo() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _accountType =
+          prefs.getString('accountType'); // e.g. "Admin" or "LabAssistant"
+      _labAssistantName = prefs.getString('labassistantname');
+    });
   }
 
   // Fetch Lab Assistants from Firestore
@@ -121,7 +142,7 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
           _unitCode = data['unitCode'] ?? '';
         });
 
-        // Check the status to see if it's Borrowed or Damaged
+        // Check if it's Borrowed or Damaged
         String lowered = _status.toLowerCase();
         if (lowered == 'borrowed') {
           _isAlreadyBorrowed = true;
@@ -191,8 +212,6 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            primaryColor: Colors.teal,
-            hintColor: Colors.tealAccent,
             colorScheme: ColorScheme.light(primary: Colors.teal),
             buttonTheme: ButtonThemeData(
               textTheme: ButtonTextTheme.primary,
@@ -210,8 +229,6 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
         builder: (context, child) {
           return Theme(
             data: Theme.of(context).copyWith(
-              primaryColor: Colors.teal,
-              hintColor: Colors.tealAccent,
               colorScheme: ColorScheme.light(primary: Colors.teal),
               buttonTheme: ButtonThemeData(
                 textTheme: ButtonTextTheme.primary,
@@ -236,13 +253,12 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
     }
   }
 
-  // **NEW**: Method to pick date/time for Expected Return
+  // Method to pick date/time for Expected Return
   Future<void> _pickExpectedReturnDateTime() async {
     DateTime now = DateTime.now();
-    // If we already have a borrowed date, use that as min (optional)
     final firstDate = _borrowedDateTime != null
         ? _borrowedDateTime!
-        : now.subtract(Duration(days: 0));
+        : now; // earliest date is now (or borrowed time)
 
     DateTime? pickedDate = await showDatePicker(
       context: context,
@@ -252,8 +268,6 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            primaryColor: Colors.teal,
-            hintColor: Colors.tealAccent,
             colorScheme: ColorScheme.light(primary: Colors.teal),
             buttonTheme: ButtonThemeData(
               textTheme: ButtonTextTheme.primary,
@@ -271,8 +285,6 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
         builder: (context, child) {
           return Theme(
             data: Theme.of(context).copyWith(
-              primaryColor: Colors.teal,
-              hintColor: Colors.tealAccent,
               colorScheme: ColorScheme.light(primary: Colors.teal),
               buttonTheme: ButtonThemeData(
                 textTheme: ButtonTextTheme.primary,
@@ -297,6 +309,65 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
     }
   }
 
+  // Method to conditionally build a Lab Assistant field
+  Widget _buildLabAssistantField() {
+    // If we haven't loaded the SharedPreferences or we have no accountType
+    if (_accountType == null) {
+      return Center(child: CircularProgressIndicator());
+    }
+
+    // If the user is Admin, show a dropdown
+    if (_accountType == 'Admin') {
+      return DropdownButtonFormField<String>(
+        value: _selectedLabAssistant,
+        decoration: InputDecoration(
+          labelText: 'Lab Assistant',
+          prefixIcon: Icon(Icons.assignment_ind),
+        ),
+        items: _labAssistants
+            .map((assistant) => DropdownMenuItem(
+                  value: assistant,
+                  child: Text(assistant),
+                ))
+            .toList(),
+        onChanged: (value) {
+          setState(() {
+            _selectedLabAssistant = value;
+          });
+        },
+        validator: (value) {
+          if (value == null || value.trim().isEmpty) {
+            return 'Please select a Lab Assistant';
+          }
+          return null;
+        },
+      );
+    }
+    // If the user is a LabAssistant, show a read-only text form field
+    else if (_accountType == 'LabAssistant') {
+      // Also set _selectedLabAssistant so we can store it on submit
+      _selectedLabAssistant ??= _labAssistantName ?? '';
+
+      return TextFormField(
+        initialValue: _labAssistantName ?? '',
+        decoration: InputDecoration(
+          labelText: 'Lab Assistant',
+          prefixIcon: Icon(Icons.assignment_ind),
+        ),
+        readOnly: true,
+        validator: (value) {
+          if (value == null || value.trim().isEmpty) {
+            return 'Lab Assistant name is missing';
+          }
+          return null;
+        },
+      );
+    } else {
+      // Another accountType or not recognized
+      return SizedBox.shrink();
+    }
+  }
+
   // Method to submit the form
   Future<void> _submitForm() async {
     if (_formKey.currentState!.validate()) {
@@ -315,7 +386,7 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
         return;
       }
 
-      // Check if the item details were fetched
+      // Check if equipment details were fetched
       if (_brand.isEmpty ||
           _model.isEmpty ||
           _room.isEmpty ||
@@ -349,7 +420,7 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
         return;
       }
 
-      // **NEW**: Check Expected Return Time
+      // Check Expected Return Time
       if (_expectedReturnDateTime == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -363,7 +434,7 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
         );
         return;
       } else {
-        // Optional: ensure expectedReturn is after borrowedTime
+        // Ensure expectedReturn is after borrowedTime
         if (_expectedReturnDateTime!.isBefore(_borrowedDateTime!)) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -396,16 +467,20 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
 
       try {
         // Send email notification (example usage)
-
         _messageverify.sendMailVerified(
-          recipientEmail: _borrowerEmailController.text,
-          message:
-              "You borrowed Item\nSerial number: ${_serialNumberController.text}\nBrand: $_brand\nUnitCode: $_unitCode",
+          recipientEmail: _borrowerEmailController.text.trim(),
+          message: "You borrowed Item(s): ${_itemsBorrowedController.text}\n"
+              "Quantity: ${_quantityController.text}\n"
+              "Serial number: ${_serialNumberController.text}\n"
+              "Brand: $_brand\n"
+              "UnitCode: $_unitCode\n"
+              "Borrowed Time: $_borrowedDateTime\n"
+              "Expected Return: $_expectedReturnDateTime\n",
           subject:
               "Borrowed Item Confirmation for ${_borrowerNameController.text}",
         );
 
-        // Add borrowing record to 'borrowings' collection with 'returnDate' as null
+        // Add borrowing record to 'borrowings' collection
         await _firestore.collection('borrowings').add({
           'borrowerName': _borrowerNameController.text.trim(),
           'borrowerEmail': _borrowerEmailController.text.trim(),
@@ -419,11 +494,14 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
           'status': _status,
           'unitCode': _unitCode,
           'borrowedTime': Timestamp.fromDate(_borrowedDateTime!),
-          'expectedReturn': Timestamp.fromDate(_expectedReturnDateTime!), // NEW
+          'expectedReturn': Timestamp.fromDate(_expectedReturnDateTime!),
           'purpose': _purposeController.text.trim(),
           'borrowedAt': Timestamp.now(),
-          'returnDate': null, // Initialize returnDate as null
+          'returnDate': null,
           'labAssistant': _selectedLabAssistant,
+          // NEW FIELDS:
+          'quantity': int.tryParse(_quantityController.text.trim()) ?? 1,
+          'itemsBorrowed': _itemsBorrowedController.text.trim(),
         });
 
         // Update equipment status to 'Borrowed'
@@ -461,7 +539,7 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
           _status = '';
           _unitCode = '';
           _borrowedDateTime = null;
-          _expectedReturnDateTime = null; // reset
+          _expectedReturnDateTime = null;
           _isAlreadyBorrowed = false;
         });
       } catch (e) {
@@ -488,6 +566,8 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
     _borrowerDepartmentController.dispose();
     _serialNumberController.dispose();
     _purposeController.dispose();
+    _quantityController.dispose(); // dispose new controller
+    _itemsBorrowedController.dispose(); // dispose new controller
     super.dispose();
   }
 
@@ -610,31 +690,8 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
                   ),
                   SizedBox(height: 16),
 
-                  // Lab Assistant Dropdown
-                  DropdownButtonFormField<String>(
-                    value: _selectedLabAssistant,
-                    decoration: InputDecoration(
-                      labelText: 'Lab Assistant',
-                      prefixIcon: Icon(Icons.assignment_ind),
-                    ),
-                    items: _labAssistants
-                        .map((assistant) => DropdownMenuItem(
-                              value: assistant,
-                              child: Text(assistant),
-                            ))
-                        .toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedLabAssistant = value;
-                      });
-                    },
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please select a Lab Assistant';
-                      }
-                      return null;
-                    },
-                  ),
+                  // Lab Assistant (conditionally show dropdown or read-only)
+                  _buildLabAssistantField(),
                 ],
               ),
             ),
@@ -707,6 +764,45 @@ class _BorrowFormScreenState extends State<BorrowFormScreen> {
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
                         return 'Please enter serial number';
+                      }
+                      return null;
+                    },
+                  ),
+                  SizedBox(height: 16),
+
+                  // Quantity
+                  TextFormField(
+                    controller: _quantityController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: 'Quantity',
+                      prefixIcon: Icon(Icons.confirmation_num),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Please enter a quantity';
+                      }
+                      final parsed = int.tryParse(value.trim());
+                      if (parsed == null || parsed <= 0) {
+                        return 'Quantity must be a positive number';
+                      }
+                      return null;
+                    },
+                  ),
+                  SizedBox(height: 16),
+
+                  // Items Borrowed
+                  TextFormField(
+                    controller: _itemsBorrowedController,
+                    decoration: InputDecoration(
+                      labelText:
+                          'Items Borrowed (e.g. 1 Crimping Tool, 1 Remote)',
+                      prefixIcon: Icon(Icons.list),
+                    ),
+                    maxLines: 3,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Please list the item(s) borrowed';
                       }
                       return null;
                     },

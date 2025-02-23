@@ -21,6 +21,7 @@ class Borrowing {
   final DateTime? returnDate;
   final String? borrowerEmail;
   final bool isDamaged;
+  final int? quantity;
   final String? damageDescription;
   final DateTime? expectedReturn; // <-- ADD THIS
 
@@ -41,6 +42,7 @@ class Borrowing {
     required this.borrowedTime,
     required this.purpose,
     required this.borrowedAt,
+    this.quantity,
     this.expectedReturn,
     this.returnDate,
     this.isDamaged = false,
@@ -62,6 +64,7 @@ class Borrowing {
       model: data['model'] ?? '',
       borrowerEmail: data['borrowerEmail'] ?? '',
       room: data['room'] ?? '',
+      quantity: data['quantity'] ?? 0,
       status: data['status'] ?? '',
       unitCode: data['unitCode'] ?? '',
       labAssistant: data['labAssistant'] ?? '',
